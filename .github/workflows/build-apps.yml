@@ -1,0 +1,125 @@
+name: Build apps
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+env:
+  APP_VERSION: 1.0.${{ github.run_number }}
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: 21 }
+      - name: Copy the app into Android
+        run: |
+          npm ci
+          npx cap sync android
+      - name: Restore signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            echo "KEYSTORE_FILE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No signing key secret yet, so the Android app is a TEST version signed with a temporary key."
+          fi
+      - name: Build APK
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: ${{ env.APP_VERSION }}
+        run: |
+          chmod +x gradlew
+          mkdir -p ../dist
+          if [ -n "$KEYSTORE_FILE" ]; then T=assembleRelease; O=release/app-release.apk; N=SalonLedger-$APP_VERSION-Android.apk
+          else T=assembleDebug; O=debug/app-debug.apk; N=SalonLedger-$APP_VERSION-Android-TEST.apk; fi
+          ./gradlew $T --no-daemon > ../gradle.log 2>&1 || { { sed -n '/What went wrong/,/Try:/p' ../gradle.log; grep -n -E 'e: |error:' ../gradle.log; } | head -40 | sed 's/^/::error::/'; exit 1; }
+          cp app/build/outputs/apk/$O ../dist/$N
+      - uses: actions/upload-artifact@v5
+        with: { name: android, path: dist/* }
+
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, args: --win, name: windows }
+          - { os: macos-latest, args: --mac, name: mac }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run: { shell: bash, working-directory: desktop }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22 }
+      - name: Build installer
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: |
+          cp -r ../www www
+          npm install --no-audit --no-fund
+          npm version "$APP_VERSION" --no-git-tag-version --allow-same-version
+          npx electron-builder ${{ matrix.args }} --publish never
+      - uses: actions/upload-artifact@v5
+        with:
+          name: ${{ matrix.name }}
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/*.dmg
+
+  web:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/configure-pages@v5
+        with: { enablement: true }
+      - uses: actions/upload-pages-artifact@v4
+        with: { path: www }
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+  release:
+    needs: [android, desktop]
+    if: always() && needs.android.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v5
+        with: { path: files, merge-multiple: true }
+      - run: ls -la files
+      - name: Publish downloads
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.APP_VERSION }}
+          name: Salon Ledger ${{ env.APP_VERSION }}
+          make_latest: true
+          body: |
+            ## Download Salon Ledger
+
+            | Device | File |
+            |---|---|
+            | **Windows PC / laptop** | `SalonLedger-Setup-${{ env.APP_VERSION }}.exe` |
+            | **Mac** | `SalonLedger-${{ env.APP_VERSION }}-Mac.dmg` |
+            | **Android phone / tablet** | `SalonLedger-${{ env.APP_VERSION }}-Android….apk` |
+            | **iPhone / iPad** | Open https://hostreadyllc.github.io/Saloon-Spa/ in Safari, tap Share, then Add to Home Screen |
+
+            Windows may show "Windows protected your PC": press **More info**, then **Run anyway**.
+            Mac may say the app can't be checked: right-click the app, choose **Open**, then **Open**.
+          files: files/*

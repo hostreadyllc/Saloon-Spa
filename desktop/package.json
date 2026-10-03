@@ -1,0 +1,31 @@
+{
+  "name": "salon-ledger",
+  "productName": "Salon Ledger",
+  "version": "1.0.0",
+  "description": "Appointments, sales, expenses, inventory, commission and VAT receipts for salons and spas",
+  "author": "Salon Ledger",
+  "license": "UNLICENSED",
+  "main": "main.js",
+  "devDependencies": {
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "ae.salonledger.app",
+    "productName": "Salon Ledger",
+    "directories": { "output": "dist" },
+    "files": ["main.js", "icon.png", "www/**/*"],
+    "icon": "icon.png",
+    "win": { "target": "nsis", "artifactName": "SalonLedger-Setup-${version}.exe" },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Salon Ledger"
+    },
+    "mac": { "target": { "target": "dmg", "arch": ["universal"] }, "category": "public.app-category.business", "artifactName": "SalonLedger-${version}-Mac.dmg" },
+    "linux": { "target": "AppImage", "artifactName": "SalonLedger-${version}-Linux.AppImage", "category": "Office" }
+  }
+}

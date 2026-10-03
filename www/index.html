@@ -222,12 +222,13 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
     <p class="sub">This is a one-time step on each device. Your records are kept in your own Supabase project, so every PC, phone and tablet sees the same data.</p>
     <ol><li>Open your project at supabase.com</li><li>Go to Project Settings, then API</li><li>Copy the Project URL and the anon public key</li></ol>
     <form id="setupForm">
-      <div class="field"><label for="suUrl">Project URL</label><input id="suUrl" placeholder="https://abcdxyz.supabase.co" autocomplete="off" required></div>
-      <div class="field"><label for="suKey">Anon public key</label><input id="suKey" placeholder="eyJhbGciOi…" autocomplete="off" required></div>
+      <div class="field"><label for="suCode">Setup code from another device</label><input id="suCode" placeholder="Paste it here, or fill in the two boxes below" autocomplete="off"></div>
+      <div class="field"><label for="suUrl">Project URL</label><input id="suUrl" placeholder="https://abcdxyz.supabase.co" autocomplete="off"></div>
+      <div class="field"><label for="suKey">Anon public key</label><input id="suKey" placeholder="eyJhbGciOi…" autocomplete="off"></div>
       <button class="btn" type="submit">Connect</button>
       <p class="sub" id="suMsg" hidden></p>
     </form>
-    <p class="sub">Tip: once one device is set up, use Settings, then Copy setup link, to set up the others in one tap.</p>
+    <p class="sub">Already set up on another device? Open Settings there, press Copy setup code, and paste it in the first box.</p>
   </div>
   <div class="gate-card" id="gateLogin" hidden>
     <img src="icons/icon-192.png" alt="">
@@ -484,7 +485,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
     <div class="panel">
       <div class="panel-head"><div style="display:grid;gap:2px"><h2>Account &amp; devices</h2><span class="sub">Signed in as <strong id="whoami"></strong></span></div><button class="btn ghost small" id="signOut">Sign out</button></div>
       <div class="tally">
-        <div class="box"><h3>Set up another device</h3><p class="sub">Open this link on the new phone, tablet or PC, then sign in. It connects the app to your database without typing any keys.</p><div class="actions" style="justify-content:flex-start"><button class="btn small" id="copySetup">Copy setup link</button></div></div>
+        <div class="box"><h3>Set up another device</h3><p class="sub">Copy the setup code and send it to yourself on WhatsApp or email. On the new PC, phone or tablet, paste it on the Connect screen, then sign in.</p><div class="actions" style="justify-content:flex-start"><button class="btn small" id="copySetup">Copy setup code</button></div></div>
         <div class="box"><h3>Install on this device</h3><p class="sub" id="installHelp"></p></div>
         <div class="box"><h3>Backup</h3><p class="sub">Download everything as one file, or restore from a backup.</p><div class="actions" style="justify-content:flex-start"><button class="btn small ghost" id="backupBtn">Download backup</button><label class="btn small ghost" for="restoreFile">Restore backup</label><input type="file" id="restoreFile" accept="application/json,.json" hidden></div></div>
       </div>
@@ -1208,8 +1209,8 @@ function renderAll() {
 $("signOut").addEventListener("click", () => LedgerSync.signOut());
 $("copySetup").addEventListener("click", async () => {
   const link = LedgerSync.setupLink();
-  try { await navigator.clipboard.writeText(link); toast("Setup link copied. Send it to the other device."); }
-  catch { prompt("Copy this setup link:", link); }
+  try { await navigator.clipboard.writeText(link); toast("Setup code copied. Paste it on the other device's Connect screen."); }
+  catch { prompt("Copy this setup code:", link); }
 });
 $("backupBtn").addEventListener("click", () => downloads.save({ filename: `salon-ledger-backup-${today()}.json`, data: JSON.stringify({ app: "salon-ledger", exported: new Date().toISOString(), data: LedgerSync.exportAll() }) }));
 $("restoreFile").addEventListener("change", async e => {
@@ -1232,8 +1233,9 @@ function renderInstallHelp() {
     : "In Chrome or Edge, click the install icon at the right end of the address bar, or open the browser menu and choose Install.";
 }
 renderInstallHelp();
-if (isNative) { $("rcptPrint").hidden = true; $("installBtn").hidden = true; $("installHelp").textContent = "You are using the Android app. PDFs, CSV exports and backups open the share menu, so you can save them to Files or send them by WhatsApp or email."; }
-else if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
+if (/Electron/.test(navigator.userAgent)) { $("installHelp").textContent = "You are using the desktop app. Updates: download the newest installer from the download page and run it; your data stays."; }
+else if (isNative) { $("rcptPrint").hidden = true; $("installBtn").hidden = true; $("installHelp").textContent = "You are using the Android app. PDFs, CSV exports and backups open the share menu, so you can save them to Files or send them by WhatsApp or email."; }
+if (!isNative && !/Electron/.test(navigator.userAgent) && "serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
 
 /* ---------- boot ---------- */
 ["txDate", "tDate", "aDate"].forEach(id => $(id).value = today());

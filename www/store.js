@@ -9,6 +9,11 @@
   const drop = k => { try { localStorage.removeItem(LS(k)); } catch {} };
 
   /* ---------- configuration ---------- */
+  function decodeCode(text) {
+    const m = text.match(/(?:#setup=|SL1-)?([A-Za-z0-9+/=]{20,})\s*$/);
+    if (!m) return null;
+    try { const c = JSON.parse(decodeURIComponent(escape(atob(m[1])))); return c.url && c.key ? c : null; } catch { return null; }
+  }
   function readConfig() {
     const m = location.hash.match(/^#setup=(.+)$/);
     if (m) {
@@ -141,7 +146,12 @@
     pending: () => outbox.length,
     exportAll: () => { const out = {}; for (const [c, m] of Object.entries(cache)) out[c] = Object.fromEntries(m); return out; },
     importAll: (data) => { let n = 0; for (const [col, docs] of Object.entries(data)) for (const [id, d] of Object.entries(docs)) { queue("set", col, id, d); n++; } return n; },
-    setupLink: () => { const c = readConfig(); return c ? location.origin + location.pathname + "#setup=" + btoa(unescape(encodeURIComponent(JSON.stringify({ url: c.url, key: c.key })))) : ""; },
+    setupLink: () => {
+      const c = readConfig(); if (!c) return "";
+      const code = btoa(unescape(encodeURIComponent(JSON.stringify({ url: c.url, key: c.key }))));
+      const hosted = location.protocol === "https:" && !/^(localhost|127\.)/.test(location.hostname);
+      return hosted ? location.origin + location.pathname + "#setup=" + code : "SL1-" + code;
+    },
     signOut: async () => {
       if (outbox.length && !confirmSignOut()) return;
       await sb.auth.signOut();
@@ -174,7 +184,13 @@
   document.addEventListener("DOMContentLoaded", () => {
     $("setupForm").addEventListener("submit", async e => {
       e.preventDefault();
-      let url = $("suUrl").value.trim().replace(/\/+$/, ""); const key = $("suKey").value.trim();
+      let url = $("suUrl").value.trim().replace(/\/+$/, ""); let key = $("suKey").value.trim();
+      const code = $("suCode").value.trim();
+      if (code) {
+        const c = decodeCode(code);
+        if (!c) { gateMsg("suMsg", "That setup code is not complete. Copy it again from Settings on the other device."); return; }
+        url = c.url.replace(/\/+$/, ""); key = c.key;
+      }
       if (!/^https:\/\/.+\.supabase\.co$/.test(url)) { gateMsg("suMsg", "The Project URL should look like https://abcdxyz.supabase.co"); return; }
       if (key.length < 30) { gateMsg("suMsg", "Paste the full anon public key (a long code starting with eyJ or sb_publishable_)."); return; }
       gateMsg("suMsg", "Checking…", true);
