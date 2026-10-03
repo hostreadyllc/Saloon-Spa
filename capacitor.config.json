@@ -1,0 +1,6 @@
+{
+  "appId": "ae.salonledger.app",
+  "appName": "Salon Ledger",
+  "webDir": "www",
+  "android": { "allowMixedContent": false }
+}

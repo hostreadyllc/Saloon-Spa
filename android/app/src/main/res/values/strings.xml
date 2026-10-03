@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Salon Ledger</string>
+    <string name="title_activity_main">Salon Ledger</string>
+    <string name="package_name">ae.salonledger.app</string>
+    <string name="custom_url_scheme">ae.salonledger.app</string>
+</resources>

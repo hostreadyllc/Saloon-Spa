@@ -1,0 +1,1258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2F6B5B">
+<meta name="description" content="Appointments, sales, expenses, inventory, commission and VAT receipts for salons and spas.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Salon Ledger">
+<title>Salon &amp; Spa Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: app shell — sticky top bar with scrolling tabs; one content column of panels; dashboard = KPI strip + 2-col grids; appointments = staff-column day schedule */
+:root {
+  --bg: #F3F5F3;
+  --surface: #FFFFFF;
+  --surface-2: #E9EEEB;
+  --line: #D5DDD8;
+  --fg: #1C2622;
+  --muted: #5E6D66;
+  --accent: #2F6B5B;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #DCEAE4;
+  --income: #2F7D62;
+  --expense: #9A4A6B;
+  --expense-soft: #F2E3E9;
+  --warn: #B26A12;
+  --warn-soft: #F8E9D2;
+  --danger: #B23A3A;
+  --danger-soft: #F6E0E0;
+  --booked: #E3ECF6;
+  --booked-ink: #2D5480;
+  --scrim: rgba(20, 28, 25, .45);
+  --font-display: "Marcellus", "Cormorant Garamond", Georgia, serif;
+  --font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121815; --surface: #19211D; --surface-2: #222C27; --line: #2F3B35;
+  --fg: #E6EDE9; --muted: #98A79F; --accent: #7CC2AA; --accent-ink: #0E1512; --accent-soft: #23362F;
+  --income: #6FC5A0; --expense: #D58AAA; --expense-soft: #3A2430; --warn: #E3A452; --warn-soft: #3A2C17;
+  --danger: #E57B7B; --danger-soft: #3B2020; --booked: #1F2C3A; --booked-ink: #9DC0E6; --scrim: rgba(0,0,0,.6);
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #121815; --surface: #19211D; --surface-2: #222C27; --line: #2F3B35;
+  --fg: #E6EDE9; --muted: #98A79F; --accent: #7CC2AA; --accent-ink: #0E1512; --accent-soft: #23362F;
+  --income: #6FC5A0; --expense: #D58AAA; --expense-soft: #3A2430; --warn: #E3A452; --warn-soft: #3A2C17;
+  --danger: #E57B7B; --danger-soft: #3B2020; --booked: #1F2C3A; --booked-ink: #9DC0E6; --scrim: rgba(0,0,0,.6);
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-height: 100vh; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+.sync { font-size: .74rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; align-self: center; }
+.sync.ok { background: var(--accent-soft); color: var(--income); }
+.sync.warn { background: var(--warn-soft); color: var(--warn); }
+.sync.bad { background: var(--danger-soft); color: var(--danger); }
+.gate { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+.gate-card { width: min(440px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 28px 24px; display: grid; gap: 16px; }
+.gate-card img { width: 56px; height: 56px; border-radius: 14px; }
+.gate-card h1 { font-size: 1.6rem; }
+.gate-card form { display: grid; gap: 12px; }
+.gate-card ol { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; color: var(--muted); font-size: .88rem; }
+.linkbtn { background: none; border: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; padding: 0; justify-self: start; }
+@media print {
+  @page { margin: 4mm; }
+  body { background: #fff; }
+  body * { visibility: hidden; }
+  #receipt, #receipt * { visibility: visible; }
+  #overlay { position: static; background: none; padding: 0; display: block; }
+  #receipt { position: absolute; left: 0; top: 0; width: 72mm; border: 0; padding: 0; font-size: 11px; }
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+.num { font-variant-numeric: tabular-nums; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; margin: 0; text-wrap: balance; }
+h2 { font-size: 1.35rem; } h3 { font-size: 1.05rem; }
+p { margin: 0; }
+
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+.topbar-inner { max-width: 1240px; margin: 0 auto; padding: 12px 16px 0; display: flex; flex-wrap: wrap; align-items: end; gap: 4px 24px; }
+.brand { display: flex; align-items: baseline; gap: 10px; padding-bottom: 8px; min-width: 0; }
+.brand h1 { font-size: 1.45rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand small { color: var(--muted); font-size: .74rem; text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
+nav { display: flex; gap: 2px; overflow-x: auto; margin-left: auto; max-width: 100%; scrollbar-width: thin; }
+nav button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 12px; font: inherit; font-weight: 600; color: var(--muted); cursor: pointer; white-space: nowrap; }
+nav button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+main { max-width: 1240px; margin: 0 auto; padding: 20px 16px 48px; display: grid; gap: 20px; }
+.tabpanel { display: grid; gap: 20px; min-width: 0; }
+.notice { background: var(--warn-soft); color: var(--fg); border-radius: var(--r); padding: 10px 14px; font-size: .9rem; }
+.notice.sample { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; background: var(--accent-soft); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; min-width: 0; display: grid; gap: 14px; align-content: start; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.sub { color: var(--muted); font-size: .84rem; }
+
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: grid; gap: 4px; min-width: 0; }
+.panel .kpi { background: var(--surface-2); border-color: transparent; }
+.kpi .label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.kpi .value { font-size: 1.5rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi .value small { font-size: .74rem; color: var(--muted); font-weight: 500; margin-right: 3px; }
+.kpi .delta { font-size: .8rem; color: var(--muted); }
+.pos { color: var(--income); } .neg { color: var(--expense); }
+
+.grid2 { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.grid2.even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 900px) { .grid2, .grid2.even { grid-template-columns: minmax(0, 1fr); } .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.chart svg { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--muted); font-size: 10px; font-family: var(--font-body); }
+.legend { display: flex; gap: 14px; font-size: .8rem; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+
+.bars { display: grid; gap: 8px; }
+.bar-row { display: grid; grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: .85rem; }
+.bar-row .track { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.bar-row .fill { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+.bar-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.table-wrap { overflow-x: auto; min-width: 0; }
+table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+th { text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+td.r, th.r { text-align: right; }
+tr.total td { font-weight: 700; border-top: 2px solid var(--line); }
+tr.clickable { cursor: pointer; } tr.clickable:hover td { background: var(--surface-2); }
+tr.sel td { background: var(--accent-soft); }
+td input { padding: 5px 8px; max-width: 110px; }
+.empty { color: var(--muted); padding: 18px 10px; text-align: center; }
+
+.pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .74rem; font-weight: 600; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+.pill.in, .pill.ok, .pill.Completed { background: var(--accent-soft); color: var(--income); }
+.pill.out { background: var(--expense-soft); color: var(--expense); }
+.pill.low, .pill.No-show { background: var(--warn-soft); color: var(--warn); }
+.pill.out-stock, .pill.Cancelled { background: var(--danger-soft); color: var(--danger); }
+.pill.Booked { background: var(--booked); color: var(--booked-ink); }
+.pill.vip { background: var(--fg); color: var(--bg); }
+
+form.entry { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; align-items: end; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field label, .field .lbl { font-size: .72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+input, select, textarea { font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0; }
+textarea { resize: vertical; min-height: 60px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.check { display: flex; align-items: center; gap: 8px; font-size: .88rem; padding-bottom: 8px; }
+.check input { width: auto; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 8px 14px; font: inherit; font-weight: 600; color: var(--muted); cursor: pointer; }
+.seg button.on[data-v="income"] { background: var(--income); color: var(--accent-ink); }
+.seg button.on[data-v="expense"] { background: var(--expense); color: var(--accent-ink); }
+
+.btn { font: inherit; font-weight: 600; border-radius: 8px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); white-space: nowrap; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn.small { padding: 4px 9px; font-size: .8rem; }
+.btn.danger { background: transparent; border-color: var(--line); color: var(--danger); }
+.btn:disabled { opacity: .5; cursor: default; }
+.actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+
+.tally { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.box { background: var(--surface-2); border-radius: 8px; padding: 12px 14px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.row { display: flex; justify-content: space-between; gap: 10px; font-size: .9rem; }
+.row.big { font-weight: 700; font-size: 1rem; border-top: 1px solid var(--line); padding-top: 6px; }
+.variance { font-weight: 700; }
+.inline-edit { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; align-items: end; background: var(--surface-2); padding: 12px; border-radius: 8px; }
+
+/* schedule */
+.sched-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+.sched { display: grid; min-width: 100%; }
+.sched .sh { position: sticky; top: 0; background: var(--surface-2); padding: 8px 10px; font-weight: 700; font-size: .85rem; border-bottom: 1px solid var(--line); border-left: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sched .sh:first-child { border-left: 0; }
+.sched .sh small { display: block; font-weight: 500; color: var(--muted); font-size: .74rem; }
+.times { position: relative; }
+.times span { position: absolute; right: 6px; font-size: .7rem; color: var(--muted); transform: translateY(-50%); }
+.times span:first-child { transform: none; }
+.col { position: relative; border-left: 1px solid var(--line); cursor: copy;
+  background-image: repeating-linear-gradient(to bottom, var(--line) 0 1px, transparent 1px var(--hour)), repeating-linear-gradient(to bottom, transparent 0 var(--half), color-mix(in srgb, var(--line) 45%, transparent) var(--half) calc(var(--half) + 1px), transparent calc(var(--half) + 1px) var(--hour)); }
+.appt { position: absolute; left: 4px; right: 4px; border-radius: 6px; padding: 4px 7px; font-size: .76rem; line-height: 1.25; overflow: hidden; cursor: pointer; border: 1px solid transparent; text-align: left; font-family: inherit; color: inherit; }
+.appt b { display: block; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.appt span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .85; }
+.appt.Booked { background: var(--booked); color: var(--booked-ink); border-color: color-mix(in srgb, var(--booked-ink) 30%, transparent); }
+.appt.Completed { background: var(--accent-soft); color: var(--income); border-color: color-mix(in srgb, var(--income) 30%, transparent); }
+.appt.No-show { background: var(--warn-soft); color: var(--warn); text-decoration: line-through; }
+.appt.sel { outline: 2px solid var(--accent); outline-offset: 1px; }
+.now-line { position: absolute; left: 0; right: 0; height: 2px; background: var(--danger); pointer-events: none; }
+
+.detail { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; background: var(--surface-2); border-radius: 8px; padding: 14px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: .9rem; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+
+/* receipt overlay */
+.overlay { position: fixed; inset: 0; background: var(--scrim); z-index: 30; display: grid; place-items: center; padding: 16px; overflow-y: auto; }
+.sheet { background: var(--surface); border-radius: 12px; width: min(420px, 100%); padding: 20px; display: grid; gap: 14px; }
+.receipt { background: #FFFFFF; color: #1C2622; border: 1px dashed #B9C4BE; border-radius: 6px; padding: 18px; font-size: .86rem; display: grid; gap: 10px; }
+.receipt h3 { text-align: center; font-size: 1.2rem; }
+.receipt .c { text-align: center; color: #5E6D66; font-size: .8rem; }
+.receipt .doc-type { text-align: center; font-weight: 700; letter-spacing: .14em; font-size: .78rem; border-block: 1px solid #D5DDD8; padding: 5px 0; }
+.receipt .row { font-size: .86rem; }
+.receipt .row.big { border-top-color: #1C2622; }
+
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: .9rem; z-index: 40; max-width: calc(100% - 32px); }
+@media (prefers-reduced-motion: no-preference) { .bar-row .fill { transition: width .4s ease; } }
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="gate-card" id="gateSetup" hidden>
+    <img src="icons/icon-192.png" alt="">
+    <h1>Connect your database</h1>
+    <p class="sub">This is a one-time step on each device. Your records are kept in your own Supabase project, so every PC, phone and tablet sees the same data.</p>
+    <ol><li>Open your project at supabase.com</li><li>Go to Project Settings, then API</li><li>Copy the Project URL and the anon public key</li></ol>
+    <form id="setupForm">
+      <div class="field"><label for="suUrl">Project URL</label><input id="suUrl" placeholder="https://abcdxyz.supabase.co" autocomplete="off" required></div>
+      <div class="field"><label for="suKey">Anon public key</label><input id="suKey" placeholder="eyJhbGciOi…" autocomplete="off" required></div>
+      <button class="btn" type="submit">Connect</button>
+      <p class="sub" id="suMsg" hidden></p>
+    </form>
+    <p class="sub">Tip: once one device is set up, use Settings, then Copy setup link, to set up the others in one tap.</p>
+  </div>
+  <div class="gate-card" id="gateLogin" hidden>
+    <img src="icons/icon-192.png" alt="">
+    <h1>Sign in</h1>
+    <form id="loginForm">
+      <div class="field"><label for="liEmail">Email</label><input id="liEmail" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="liPass">Password</label><input id="liPass" type="password" autocomplete="current-password" required></div>
+      <button class="btn" type="submit">Sign in</button>
+      <p class="sub" id="liMsg" hidden></p>
+    </form>
+    <button class="linkbtn" id="liForgot" type="button">Forgot password</button>
+    <button class="linkbtn" id="liChange" type="button">Connect a different database</button>
+  </div>
+  <div class="gate-card" id="gateReset" hidden>
+    <h1>Set a new password</h1>
+    <form id="resetForm">
+      <div class="field"><label for="rpPass">New password</label><input id="rpPass" type="password" autocomplete="new-password" minlength="8" required></div>
+      <button class="btn" type="submit">Save password</button>
+      <p class="sub" id="rpMsg" hidden></p>
+    </form>
+  </div>
+</div>
+<div id="appShell" hidden>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand"><h1 id="brandName">Salon &amp; Spa Ledger</h1><span class="sync ok" id="syncStatus">Synced</span><button class="btn small ghost" id="installBtn" hidden>Install app</button></div>
+    <nav role="tablist" id="tabs">
+      <button role="tab" data-tab="dashboard" aria-selected="true">Dashboard</button>
+      <button role="tab" data-tab="appts" aria-selected="false">Appointments</button>
+      <button role="tab" data-tab="money" aria-selected="false">Income &amp; Expenses</button>
+      <button role="tab" data-tab="tally" aria-selected="false">Daily Tally</button>
+      <button role="tab" data-tab="clients" aria-selected="false">Clients</button>
+      <button role="tab" data-tab="inventory" aria-selected="false">Inventory</button>
+      <button role="tab" data-tab="staff" aria-selected="false">Staff &amp; Commission</button>
+      <button role="tab" data-tab="reports" aria-selected="false">Reports</button>
+      <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="notice" id="offline" hidden></div>
+  <div class="notice sample" id="sampleBar" hidden>
+    <span>You are looking at <strong>sample data</strong>: example staff, services, clients and bookings. Clear it when you are ready to enter your own.</span>
+    <button class="btn small ghost" id="clearSample">Clear sample data</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <section id="tab-dashboard" class="tabpanel">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid2">
+      <div class="panel">
+        <div class="panel-head"><h2>Last 14 days</h2><div class="legend"><span><i style="background:var(--income)"></i>Income</span><span><i style="background:var(--expense)"></i>Expenses</span></div></div>
+        <div class="chart" id="chart14"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Today's bookings</h2><button class="btn small ghost" data-goto="appts">Open calendar</button></div>
+        <div id="dashAppts"></div>
+      </div>
+    </div>
+    <div class="grid2 even">
+      <div class="panel">
+        <div class="panel-head"><h2>Income by service, this month</h2></div>
+        <div class="bars" id="catBars"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Low stock</h2><span class="sub" id="lowCount"></span></div>
+        <div id="lowStock"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Recent entries</h2><button class="btn small ghost" data-goto="money">Add entry</button></div>
+      <div class="table-wrap" id="recent"></div>
+    </div>
+  </section>
+
+  <!-- APPOINTMENTS -->
+  <section id="tab-appts" class="tabpanel" hidden>
+    <div class="panel">
+      <div class="panel-head">
+        <div style="display:grid;gap:2px"><h2 id="aTitle">Appointments</h2><span class="sub" id="aSummary"></span></div>
+        <div class="toolbar">
+          <button class="btn ghost small" id="aPrev" aria-label="Previous day">◀</button>
+          <div class="field"><label for="aDate">Day</label><input type="date" id="aDate"></div>
+          <button class="btn ghost small" id="aNext" aria-label="Next day">▶</button>
+          <button class="btn ghost small" id="aToday">Today</button>
+          <button class="btn" id="aNew">New booking</button>
+        </div>
+      </div>
+      <form class="entry" id="bookForm" hidden>
+        <div class="field"><label for="bDate">Date</label><input type="date" id="bDate" required></div>
+        <div class="field"><label for="bTime">Time</label><select id="bTime"></select></div>
+        <div class="field"><label for="bClient">Client</label><input id="bClient" list="clientList" required placeholder="Name"></div>
+        <div class="field"><label for="bPhone">Phone</label><input id="bPhone" type="tel" placeholder="+971 5x xxx xxxx"></div>
+        <div class="field"><label for="bService">Service</label><select id="bService"></select></div>
+        <div class="field"><label for="bStaff">Staff</label><select id="bStaff"></select></div>
+        <div class="field"><label for="bDur">Minutes</label><input type="number" id="bDur" min="15" step="15" value="60"></div>
+        <div class="field"><label for="bPrice">Price (AED)</label><input type="number" id="bPrice" min="0" step="0.01"></div>
+        <div class="field"><label for="bNote">Note</label><input id="bNote" placeholder="Optional"></div>
+        <div class="actions"><button class="btn" type="submit" id="bSave">Save booking</button><button class="btn ghost" type="button" id="bCancel">Close</button></div>
+        <p class="sub" id="bWarn" style="grid-column:1/-1;color:var(--warn)" hidden></p>
+      </form>
+      <div id="apptDetail"></div>
+      <p class="sub">Click an empty slot to book it. Click a booking to check out, edit or cancel it.</p>
+      <div class="sched-wrap" id="sched"></div>
+      <div class="table-wrap" id="apptList"></div>
+    </div>
+  </section>
+
+  <!-- INCOME & EXPENSES -->
+  <section id="tab-money" class="tabpanel" hidden>
+    <div class="panel">
+      <div class="panel-head"><h2>New entry</h2>
+        <div class="seg" id="typeSeg"><button type="button" data-v="income" class="on">Income</button><button type="button" data-v="expense">Expense</button></div>
+      </div>
+      <form class="entry" id="txForm">
+        <div class="field"><label for="txDate">Date</label><input type="date" id="txDate" required></div>
+        <div class="field"><label for="txCat">Category</label><select id="txCat"></select></div>
+        <div class="field" id="itemField" hidden><label for="txItem">Product sold</label><select id="txItem"></select></div>
+        <div class="field" id="qtyField" hidden><label for="txQty">Qty</label><input type="number" id="txQty" min="1" step="1" value="1"></div>
+        <div class="field"><label for="txDesc">Description</label><input id="txDesc" placeholder="e.g. Keratin treatment"></div>
+        <div class="field"><label for="txAmount">Amount (AED)</label><input type="number" id="txAmount" min="0" step="0.01" required placeholder="0.00"></div>
+        <div class="field"><label for="txPay">Paid by</label><select id="txPay"><option>Cash</option><option>Card</option><option>Bank transfer</option></select></div>
+        <div class="field"><label for="txStaff">Staff</label><select id="txStaff"></select></div>
+        <div class="field" id="clientField"><label for="txClient">Client</label><input id="txClient" list="clientList" placeholder="Optional"></div>
+        <label class="check"><input type="checkbox" id="txVat" checked> Amount includes 5% VAT</label>
+        <button class="btn" type="submit">Save entry</button>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Entries</h2>
+        <div class="toolbar">
+          <div class="field"><label for="fMonth">Month</label><input type="month" id="fMonth"></div>
+          <div class="field"><label for="fType">Show</label><select id="fType"><option value="">All</option><option value="income">Income</option><option value="expense">Expenses</option></select></div>
+        </div>
+      </div>
+      <div class="table-wrap" id="txTable"></div>
+    </div>
+  </section>
+
+  <!-- DAILY TALLY -->
+  <section id="tab-tally" class="tabpanel" hidden>
+    <div class="panel">
+      <div class="panel-head"><h2>Day closing</h2>
+        <div class="toolbar"><div class="field"><label for="tDate">Date</label><input type="date" id="tDate"></div></div>
+      </div>
+      <div class="tally" id="tallyBoxes"></div>
+      <form class="entry" id="closeForm">
+        <div class="field"><label for="tFloat">Opening cash float</label><input type="number" id="tFloat" step="0.01" min="0" value="500"></div>
+        <div class="field"><label for="tCounted">Cash counted in drawer</label><input type="number" id="tCounted" step="0.01" min="0" placeholder="0.00"></div>
+        <div class="field"><label for="tCard">Card machine settlement</label><input type="number" id="tCard" step="0.01" min="0" placeholder="0.00"></div>
+        <div class="field"><label for="tNote">Note</label><input id="tNote" placeholder="Optional"></div>
+        <button class="btn" type="submit">Save closing</button>
+      </form>
+      <div class="tally" id="varianceBox"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Saved closings</h2></div>
+      <div class="table-wrap" id="closingsTable"></div>
+    </div>
+  </section>
+
+  <!-- CLIENTS -->
+  <section id="tab-clients" class="tabpanel" hidden>
+    <div class="kpis" id="cKpis"></div>
+    <div class="panel">
+      <div class="panel-head"><h2>Add client</h2></div>
+      <form class="entry" id="clientForm">
+        <div class="field"><label for="cName">Name</label><input id="cName" required></div>
+        <div class="field"><label for="cPhone">Phone</label><input id="cPhone" type="tel" placeholder="+971 5x xxx xxxx"></div>
+        <div class="field"><label for="cEmail">Email</label><input id="cEmail" type="email"></div>
+        <div class="field"><label for="cBirthday">Birthday</label><input id="cBirthday" type="date"></div>
+        <div class="field"><label for="cNotes">Notes</label><input id="cNotes" placeholder="Allergies, preferences"></div>
+        <button class="btn" type="submit">Add client</button>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Clients</h2>
+        <div class="toolbar"><div class="field"><label for="cFilter">Search</label><input id="cFilter" placeholder="Name or phone"></div></div>
+      </div>
+      <div id="clientDetail"></div>
+      <div class="table-wrap" id="clientTable"></div>
+    </div>
+  </section>
+
+  <!-- INVENTORY -->
+  <section id="tab-inventory" class="tabpanel" hidden>
+    <div class="kpis" id="invKpis"></div>
+    <div class="panel">
+      <div class="panel-head"><h2>Add product</h2></div>
+      <form class="entry" id="invForm">
+        <div class="field"><label for="iName">Product name</label><input id="iName" required placeholder="e.g. Argan oil shampoo 500ml"></div>
+        <div class="field"><label for="iUse">Type</label><select id="iUse"><option>Retail</option><option>Salon use</option></select></div>
+        <div class="field"><label for="iQty">Qty in stock</label><input type="number" id="iQty" min="0" step="1" value="0"></div>
+        <div class="field"><label for="iReorder">Reorder at</label><input type="number" id="iReorder" min="0" step="1" value="3"></div>
+        <div class="field"><label for="iCost">Cost (AED)</label><input type="number" id="iCost" min="0" step="0.01" value="0"></div>
+        <div class="field"><label for="iPrice">Sell price (AED)</label><input type="number" id="iPrice" min="0" step="0.01" value="0"></div>
+        <button class="btn" type="submit">Add product</button>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Stock</h2>
+        <div class="toolbar"><div class="field"><label for="iFilter">Search</label><input id="iFilter" placeholder="Filter products"></div></div>
+      </div>
+      <div id="invEdit"></div>
+      <div class="table-wrap" id="invTable"></div>
+    </div>
+  </section>
+
+  <!-- STAFF -->
+  <section id="tab-staff" class="tabpanel" hidden>
+    <div class="panel">
+      <div class="panel-head"><div style="display:grid;gap:2px"><h2>Commission</h2><span class="sub">Worked out on sales excluding VAT</span></div>
+        <div class="toolbar"><div class="field"><label for="sMonth">Month</label><input type="month" id="sMonth"></div></div>
+      </div>
+      <div class="table-wrap" id="commTable"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Team</h2></div>
+      <form class="entry" id="staffForm">
+        <div class="field"><label for="stName">Name</label><input id="stName" required></div>
+        <div class="field"><label for="stRole">Role</label><input id="stRole" placeholder="e.g. Hair stylist"></div>
+        <div class="field"><label for="stSvc">Service commission %</label><input type="number" id="stSvc" min="0" max="100" step="0.5" value="10"></div>
+        <div class="field"><label for="stProd">Product commission %</label><input type="number" id="stProd" min="0" max="100" step="0.5" value="5"></div>
+        <button class="btn" type="submit">Add staff member</button>
+      </form>
+      <div class="table-wrap" id="staffTable"></div>
+    </div>
+  </section>
+
+  <!-- REPORTS -->
+  <section id="tab-reports" class="tabpanel" hidden>
+    <div class="panel">
+      <div class="panel-head"><h2>Monthly report</h2>
+        <div class="toolbar">
+          <div class="field"><label for="rMonth">Month</label><input type="month" id="rMonth"></div>
+          <button class="btn ghost" id="exportCsv" hidden>Export CSV</button>
+        </div>
+      </div>
+      <div class="kpis" id="rKpis"></div>
+    </div>
+    <div class="grid2 even">
+      <div class="panel"><h2>Profit &amp; loss</h2><div class="table-wrap" id="rPL"></div></div>
+      <div class="panel" style="gap:20px">
+        <div style="display:grid;gap:10px"><h2>VAT summary</h2><div class="table-wrap" id="rVat"></div></div>
+        <div style="display:grid;gap:10px"><h2>Payment methods</h2><div class="table-wrap" id="rPay"></div></div>
+        <div style="display:grid;gap:10px"><h2>Top clients</h2><div class="table-wrap" id="rClients"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="tab-settings" class="tabpanel" hidden>
+    <div class="panel">
+      <div class="panel-head"><div style="display:grid;gap:2px"><h2>Account &amp; devices</h2><span class="sub">Signed in as <strong id="whoami"></strong></span></div><button class="btn ghost small" id="signOut">Sign out</button></div>
+      <div class="tally">
+        <div class="box"><h3>Set up another device</h3><p class="sub">Open this link on the new phone, tablet or PC, then sign in. It connects the app to your database without typing any keys.</p><div class="actions" style="justify-content:flex-start"><button class="btn small" id="copySetup">Copy setup link</button></div></div>
+        <div class="box"><h3>Install on this device</h3><p class="sub" id="installHelp"></p></div>
+        <div class="box"><h3>Backup</h3><p class="sub">Download everything as one file, or restore from a backup.</p><div class="actions" style="justify-content:flex-start"><button class="btn small ghost" id="backupBtn">Download backup</button><label class="btn small ghost" for="restoreFile">Restore backup</label><input type="file" id="restoreFile" accept="application/json,.json" hidden></div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div style="display:grid;gap:2px"><h2>Business details</h2><span class="sub">Printed on every receipt. Add your TRN to issue tax invoices.</span></div></div>
+      <form class="entry" id="bizForm">
+        <div class="field"><label for="zName">Business name</label><input id="zName" placeholder="Your salon name"></div>
+        <div class="field"><label for="zTrn">TRN (VAT number)</label><input id="zTrn" inputmode="numeric" placeholder="15 digits"></div>
+        <div class="field"><label for="zAddr">Address</label><input id="zAddr" placeholder="Shop, building, area, emirate"></div>
+        <div class="field"><label for="zPhone">Phone</label><input id="zPhone" type="tel"></div>
+        <div class="field"><label for="zOpen">Opens at (hour)</label><input id="zOpen" type="number" min="0" max="23" value="10"></div>
+        <div class="field"><label for="zClose">Closes at (hour)</label><input id="zClose" type="number" min="1" max="24" value="22"></div>
+        <div class="field"><label for="zFooter">Receipt message</label><input id="zFooter" placeholder="Thank you for visiting"></div>
+        <button class="btn" type="submit">Save details</button>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div style="display:grid;gap:2px"><h2>Service menu</h2><span class="sub">Used for bookings. Edit prices and times in the table.</span></div></div>
+      <form class="entry" id="svcForm">
+        <div class="field"><label for="vName">Service</label><input id="vName" required placeholder="e.g. Blow-dry"></div>
+        <div class="field"><label for="vCat">Category</label><select id="vCat"></select></div>
+        <div class="field"><label for="vDur">Minutes</label><input type="number" id="vDur" min="15" step="15" value="60"></div>
+        <div class="field"><label for="vPrice">Price incl. VAT (AED)</label><input type="number" id="vPrice" min="0" step="0.01" value="0"></div>
+        <button class="btn" type="submit">Add service</button>
+      </form>
+      <div class="table-wrap" id="svcTable"></div>
+    </div>
+  </section>
+</main>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="rcptTitle">
+    <div class="panel-head"><h2 id="rcptTitle">Receipt</h2><button class="btn ghost small" id="rcptClose">Close</button></div>
+    <div class="receipt" id="receipt"></div>
+    <p class="sub" id="rcptHint" hidden></p>
+    <div class="actions"><button class="btn ghost" id="rcptCopy">Copy as text</button><button class="btn ghost" id="rcptPrint">Print</button><button class="btn" id="rcptPdf" hidden>Download PDF</button></div>
+  </div>
+</div>
+<datalist id="clientList"></datalist>
+<div class="toast" id="toast" hidden></div>
+
+<script src="lib/capacitor.js"></script>
+<script src="lib/jspdf.umd.min.js"></script>
+<script src="lib/supabase.js"></script>
+<script src="config.js"></script>
+<script src="store.js"></script>
+<script>
+const INCOME_CATS = ["Hair services","Nail services","Spa & massage","Skin & facial","Lashes, brows & waxing","Product sale","Packages & memberships","Other income"];
+const EXPENSE_CATS = ["Rent","Salaries & commission","Products & supplies","Utilities (DEWA)","Marketing","Licences & visas","Maintenance & repairs","Other expense"];
+const SERVICE_CATS = INCOME_CATS.filter(c => c !== "Product sale" && c !== "Other income");
+const COLS = ["transactions","inventory","closings","clients","appointments","staff","services"];
+const SLOT = 34; // px per 30 minutes
+
+const S = { transactions: [], inventory: [], closings: [], clients: [], appointments: [], staff: [], services: [], settings: {},
+  type: "income", tab: "dashboard", editInv: null, selAppt: null, editAppt: null, selClient: null, rcpt: null, clashOk: false };
+let db = null;
+const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+const toBase64 = async data => {
+  const blob = data instanceof Blob ? data : new Blob([data]);
+  const buf = new Uint8Array(await blob.arrayBuffer()); let bin = "";
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  return btoa(bin);
+};
+const downloads = { save: async ({ filename, data }) => {
+  if (isNative) {
+    const C = window.Capacitor, Filesystem = C.Plugins.Filesystem || C.registerPlugin("Filesystem"), Share = C.Plugins.Share || C.registerPlugin("Share");
+    const res = await Filesystem.writeFile({ path: filename, data: await toBase64(data), directory: "CACHE" });
+    try { await Share.share({ title: filename, files: [res.uri], dialogTitle: "Save or send " + filename }); }
+    catch (e) { if (!/cancel/i.test(e?.message || "")) toast("Could not open the share menu."); }
+    return { status: "saved" };
+  }
+  const blob = data instanceof Blob ? data : new Blob([data], { type: filename.endsWith(".pdf") ? "application/pdf" : filename.endsWith(".csv") ? "text/csv" : "application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  return { status: "saved" };
+} };
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, "0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today = () => ymd(new Date());
+const monthOf = s => s.slice(0, 7);
+const addDays = (s, n) => { const [y,m,d] = s.split("-").map(Number); return ymd(new Date(y, m-1, d + n)); };
+const fmt = n => (Math.round((n || 0) * 100) / 100).toLocaleString("en-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt0 = n => Math.round(n || 0).toLocaleString("en-AE");
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const r2 = n => Math.round(n * 100) / 100;
+const vatOf = (amt, incl) => incl ? r2(amt * 5 / 105) : 0;
+const prettyDate = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d).toLocaleDateString("en-GB", { day: "numeric", month: "short" }); };
+const longDate = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }); };
+const monthName = m => { const [y, mo] = m.split("-").map(Number); return new Date(y, mo-1, 1).toLocaleDateString("en-GB", { month: "long", year: "numeric" }); };
+const toMin = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+const fromMin = m => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+const time12 = t => { const m = toMin(t), h = Math.floor(m / 60); return `${(h % 12) || 12}:${pad(m % 60)} ${h < 12 ? "am" : "pm"}`; };
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const strip = o => { const { id, ...rest } = o; return rest; };
+const hours = () => ({ open: (+S.settings.openHour || 10) * 60, close: (+S.settings.closeHour || 22) * 60 });
+
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2600); }
+function arm(b, label = "Confirm") { if (b.dataset.armed) return true; const old = b.textContent; b.dataset.armed = "1"; b.textContent = label; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = old; } }, 3000); return false; }
+
+/* ---------- persistence ---------- */
+async function save(col, id, data) {
+  if (!db) { const i = S[col].findIndex(x => x.id === id); const row = { ...data, id }; i >= 0 ? S[col][i] = row : S[col].push(row); renderAll(); return; }
+  try { await db.collection(col).doc(id).set(data); }
+  catch (e) { toast(e.code === "quota_exceeded" ? "Storage is full. Delete old entries and try again." : e.code === "invalid_argument" ? "You don't have permission to change this ledger." : "Could not save. Check your connection and try again."); throw e; }
+}
+const patch = (col, id, p) => { const cur = S[col].find(x => x.id === id); return save(col, id, { ...(cur ? strip(cur) : {}), ...p }); };
+async function remove(col, id) {
+  if (!db) { S[col] = S[col].filter(x => x.id !== id); renderAll(); return; }
+  try { await db.collection(col).doc(id).delete(); } catch { toast("Could not delete. Try again."); }
+}
+const SORTS = {
+  transactions: (a, b) => b.date.localeCompare(a.date) || (b.created || 0) - (a.created || 0),
+  closings: (a, b) => b.date.localeCompare(a.date),
+  inventory: (a, b) => a.name.localeCompare(b.name),
+  clients: (a, b) => a.name.localeCompare(b.name),
+  staff: (a, b) => a.name.localeCompare(b.name),
+  services: (a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name),
+  appointments: (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time),
+};
+let renderQueued = false;
+const queueRender = () => { if (renderQueued) return; renderQueued = true; requestAnimationFrame(() => { renderQueued = false; renderAll(); }); };
+
+/* ---------- lookups ---------- */
+function staffNames() {
+  const names = S.staff.map(s => s.name);
+  return names.length ? names : [...new Set(S.transactions.map(t => t.staff).filter(Boolean))].sort();
+}
+function staffOptions(sel, withBlank) {
+  const cur = sel.value;
+  sel.innerHTML = (withBlank ? `<option value="">—</option>` : "") + staffNames().map(n => `<option>${esc(n)}</option>`).join("");
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+function clientStats() {
+  const m = {};
+  for (const t of S.transactions) if (t.type === "income" && t.clientId) {
+    const s = m[t.clientId] ||= { visits: new Set(), spent: 0, last: "" };
+    s.visits.add(t.date); s.spent += t.amount; if (t.date > s.last) s.last = t.date;
+  }
+  return m;
+}
+const tier = (st) => !st ? ["New", ""] : st.spent >= 3000 || st.visits.size >= 10 ? ["VIP", "vip"] : st.visits.size >= 3 ? ["Regular", "ok"] : ["New", ""];
+async function ensureClient(name, phone) {
+  name = (name || "").trim(); phone = (phone || "").trim();
+  if (!name) return null;
+  const c = S.clients.find(c => c.name.toLowerCase() === name.toLowerCase() && (!phone || !c.phone || c.phone === phone));
+  if (c) { if (phone && !c.phone) await patch("clients", c.id, { phone }); return c; }
+  const id = newId(), data = { name, phone, email: "", birthday: "", notes: "", created: Date.now() };
+  await save("clients", id, data);
+  return { id, ...data };
+}
+const invoiceNo = () => { const d = new Date(); return `INV-${String(d.getFullYear()).slice(2)}${pad(d.getMonth()+1)}${pad(d.getDate())}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`; };
+
+/* ---------- tabs ---------- */
+function showTab(t) {
+  S.tab = t;
+  document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t));
+  document.querySelectorAll(".tabpanel").forEach(p => p.hidden = p.id !== "tab-" + t);
+  try { localStorage.setItem("ledgerTab", t); } catch {}
+  renderAll();
+}
+$("tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) showTab(b.dataset.tab); });
+document.addEventListener("click", e => { const g = e.target.closest("[data-goto]"); if (g) showTab(g.dataset.goto); });
+
+/* ---------- aggregates ---------- */
+function sums(list) {
+  let inc = 0, exp = 0, outVat = 0, inVat = 0;
+  for (const t of list) { if (t.type === "income") { inc += t.amount; outVat += t.vat || 0; } else { exp += t.amount; inVat += t.vat || 0; } }
+  return { inc, exp, net: inc - exp, outVat, inVat };
+}
+const groupBy = (list, f) => list.reduce((m, x) => { const k = f(x); m[k] = (m[k] || 0) + x.amount; return m; }, {});
+
+/* ---------- dashboard ---------- */
+function renderDashboard() {
+  const t = today(), m = monthOf(t);
+  const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); const pm = ymd(d).slice(0, 7);
+  const todayS = sums(S.transactions.filter(x => x.date === t));
+  const monthS = sums(S.transactions.filter(x => monthOf(x.date) === m));
+  const prevS = sums(S.transactions.filter(x => monthOf(x.date) === pm));
+  const delta = (a, b) => b ? `${a >= b ? "▲" : "▼"} ${Math.abs(Math.round((a - b) / b * 100))}% vs last month` : "No data last month";
+  const booked = S.appointments.filter(a => a.date === t && a.status !== "Cancelled");
+  $("kpis").innerHTML = [
+    ["Income today", todayS.inc, `${booked.length} booking${booked.length === 1 ? "" : "s"} today`],
+    ["Income this month", monthS.inc, delta(monthS.inc, prevS.inc)],
+    ["Expenses this month", monthS.exp, delta(monthS.exp, prevS.exp)],
+    ["Net profit this month", monthS.net, monthS.inc ? `${Math.round(monthS.net / monthS.inc * 100)}% margin` : "—"],
+  ].map(([l, v, s], i) => `<div class="kpi"><span class="label">${l}</span><span class="value num ${i === 3 ? (v >= 0 ? "pos" : "neg") : ""}"><small>AED</small>${fmt0(v)}</span><span class="delta">${s}</span></div>`).join("");
+
+  const days = []; for (let i = 13; i >= 0; i--) days.push(addDays(t, -i));
+  const data = days.map(dd => { const s = sums(S.transactions.filter(x => x.date === dd)); return { dd, inc: s.inc, exp: s.exp }; });
+  const max = Math.max(100, ...data.map(x => Math.max(x.inc, x.exp)));
+  const step = Math.pow(10, Math.floor(Math.log10(max))); const nice = Math.ceil(max / step) * step;
+  const W = 640, H = 220, L = 50, B = 24, T = 8, cw = (W - L - 6) / 14, bw = Math.min(14, cw / 2 - 3);
+  const y = v => T + (H - T - B) * (1 - v / nice);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Income and expenses per day for the last 14 days">`;
+  for (let k = 0; k <= 4; k++) { const v = nice * k / 4; svg += `<line x1="${L}" x2="${W-4}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${y(v)+3}" text-anchor="end">${fmt0(v)}</text>`; }
+  data.forEach((p, i) => {
+    const cx = L + cw * i + cw / 2;
+    svg += `<rect x="${cx - bw - 1}" y="${y(p.inc)}" width="${bw}" height="${y(0) - y(p.inc)}" rx="2" fill="var(--income)"><title>${prettyDate(p.dd)} income AED ${fmt(p.inc)}</title></rect>`;
+    svg += `<rect x="${cx + 1}" y="${y(p.exp)}" width="${bw}" height="${y(0) - y(p.exp)}" rx="2" fill="var(--expense)"><title>${prettyDate(p.dd)} expenses AED ${fmt(p.exp)}</title></rect>`;
+    if (i % 2 === 1) svg += `<text x="${cx}" y="${H - 6}" text-anchor="middle">${prettyDate(p.dd)}</text>`;
+  });
+  $("chart14").innerHTML = svg + "</svg>";
+
+  $("dashAppts").innerHTML = booked.length ? `<table><tbody>${booked.map(a => `<tr><td class="num" style="white-space:nowrap">${time12(a.time)}</td><td>${esc(a.clientName)}<div class="sub">${esc(a.serviceName)} · ${esc(a.staff)}</div></td><td class="r"><span class="pill ${a.status}">${a.status}</span></td></tr>`).join("")}</tbody></table>` : `<p class="empty">No bookings today.</p>`;
+
+  const low = S.inventory.filter(i => i.qty <= i.reorder).sort((a, b) => a.qty - b.qty);
+  $("lowCount").textContent = low.length ? `${low.length} to reorder` : "";
+  $("lowStock").innerHTML = low.length ? `<table><tbody>${low.slice(0, 8).map(i => `<tr><td>${esc(i.name)}<div class="sub">${esc(i.use)}</div></td><td class="r num">${i.qty} left</td><td class="r">${i.qty <= 0 ? '<span class="pill out-stock">Out</span>' : '<span class="pill low">Low</span>'}</td></tr>`).join("")}</tbody></table>` : `<p class="empty">All products are above their reorder level.</p>`;
+
+  const cats = Object.entries(groupBy(S.transactions.filter(x => x.type === "income" && monthOf(x.date) === m), x => x.category)).sort((a, b) => b[1] - a[1]);
+  const cmax = cats[0]?.[1] || 1;
+  $("catBars").innerHTML = cats.length ? cats.map(([c, v]) => `<div class="bar-row"><span class="name">${esc(c)}</span><span class="track"><span class="fill" style="width:${v / cmax * 100}%"></span></span><span class="num">${fmt0(v)}</span></div>`).join("") : `<p class="empty">No income recorded this month yet.</p>`;
+  $("recent").innerHTML = txTable(S.transactions.slice(0, 6), false);
+}
+
+/* ---------- appointments ---------- */
+function fillBookingSelects() {
+  const { open, close } = hours();
+  const curT = $("bTime").value;
+  let opts = ""; for (let m = open; m < close; m += 15) opts += `<option value="${fromMin(m)}">${time12(fromMin(m))}</option>`;
+  $("bTime").innerHTML = opts; if (curT) $("bTime").value = curT;
+  const curS = $("bService").value;
+  const byCat = {}; S.services.forEach(s => (byCat[s.category] ||= []).push(s));
+  $("bService").innerHTML = `<option value="">Custom service</option>` + Object.entries(byCat).map(([c, list]) => `<optgroup label="${esc(c)}">${list.map(s => `<option value="${s.id}">${esc(s.name)} · AED ${fmt0(s.price)}</option>`).join("")}</optgroup>`).join("");
+  $("bService").value = curS;
+  staffOptions($("bStaff"));
+}
+function openBooking(pre = {}) {
+  fillBookingSelects();
+  S.clashOk = false; $("bWarn").hidden = true;
+  const a = pre.id ? S.appointments.find(x => x.id === pre.id) : null;
+  S.editAppt = a ? a.id : null;
+  $("bDate").value = a?.date || pre.date || $("aDate").value;
+  $("bTime").value = a?.time || pre.time || fromMin(hours().open);
+  $("bClient").value = a?.clientName || pre.clientName || "";
+  $("bPhone").value = a?.phone || pre.phone || "";
+  $("bService").value = a?.serviceId || "";
+  if (a?.staff || pre.staff) $("bStaff").value = a?.staff || pre.staff;
+  $("bDur").value = a?.duration || 60;
+  $("bPrice").value = a?.price ?? "";
+  $("bNote").value = a?.note || "";
+  $("bSave").textContent = a ? "Update booking" : "Save booking";
+  $("bookForm").hidden = false;
+  $("bClient").focus();
+}
+$("aNew").addEventListener("click", () => openBooking());
+$("bCancel").addEventListener("click", () => { $("bookForm").hidden = true; S.editAppt = null; });
+$("bService").addEventListener("change", () => { const s = S.services.find(x => x.id === $("bService").value); if (s) { $("bDur").value = s.duration; $("bPrice").value = s.price; } });
+$("bClient").addEventListener("change", () => { const c = S.clients.find(c => c.name.toLowerCase() === $("bClient").value.trim().toLowerCase()); if (c && !$("bPhone").value) $("bPhone").value = c.phone || ""; });
+["bDate","bTime","bStaff","bDur"].forEach(id => $(id).addEventListener("change", () => { S.clashOk = false; $("bWarn").hidden = true; }));
+$("bookForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const svc = S.services.find(x => x.id === $("bService").value);
+  const row = { date: $("bDate").value, time: $("bTime").value, duration: Math.max(15, +$("bDur").value || 60), staff: $("bStaff").value,
+    serviceId: svc?.id || "", serviceName: svc?.name || $("bNote").value.trim() || "Service", category: svc?.category || "Other income",
+    price: +$("bPrice").value || 0, note: $("bNote").value.trim(), phone: $("bPhone").value.trim() };
+  if (!row.staff) { toast("Add staff in the Staff & Commission tab first."); return; }
+  const start = toMin(row.time), end = start + row.duration;
+  const clash = S.appointments.find(a => a.id !== S.editAppt && a.date === row.date && a.staff === row.staff && a.status !== "Cancelled" && toMin(a.time) < end && toMin(a.time) + a.duration > start);
+  if (clash && !S.clashOk) { S.clashOk = true; $("bWarn").textContent = `${row.staff} already has ${clash.clientName} at ${time12(clash.time)}. Press Save again to double-book.`; $("bWarn").hidden = false; return; }
+  const client = await ensureClient($("bClient").value, row.phone);
+  row.clientId = client?.id || ""; row.clientName = client?.name || $("bClient").value.trim();
+  if (S.editAppt) { await patch("appointments", S.editAppt, row); toast("Booking updated"); S.selAppt = S.editAppt; }
+  else { const id = newId(); await save("appointments", id, { ...row, status: "Booked", created: Date.now() }); toast(`Booked ${row.clientName} with ${row.staff} at ${time12(row.time)}`); S.selAppt = id; }
+  $("aDate").value = row.date; $("bookForm").hidden = true; S.editAppt = null; renderAll();
+});
+$("aPrev").addEventListener("click", () => { $("aDate").value = addDays($("aDate").value, -1); S.selAppt = null; renderAppts(); });
+$("aNext").addEventListener("click", () => { $("aDate").value = addDays($("aDate").value, 1); S.selAppt = null; renderAppts(); });
+$("aToday").addEventListener("click", () => { $("aDate").value = today(); renderAppts(); });
+$("aDate").addEventListener("change", () => { S.selAppt = null; renderAppts(); });
+
+function renderAppts() {
+  const d = $("aDate").value || today(), { open, close } = hours();
+  const day = S.appointments.filter(a => a.date === d);
+  const active = day.filter(a => a.status !== "Cancelled");
+  $("aTitle").textContent = d === today() ? "Today" : longDate(d);
+  $("aSummary").textContent = `${d === today() ? longDate(d) + " · " : ""}${active.length} booking${active.length === 1 ? "" : "s"} · AED ${fmt0(active.reduce((a, x) => a + (x.price || 0), 0))} booked`;
+  const cols = staffNames().slice();
+  active.forEach(a => { if (a.staff && !cols.includes(a.staff)) cols.push(a.staff); });
+  const H = (close - open) / 30 * SLOT;
+  if (!cols.length) { $("sched").innerHTML = `<p class="empty">Add your team in the Staff &amp; Commission tab to start taking bookings.</p>`; }
+  else {
+    let h = `<div class="sched" style="grid-template-columns:58px repeat(${cols.length}, minmax(150px, 1fr));--hour:${SLOT * 2}px;--half:${SLOT}px"><div class="sh"></div>`;
+    h += cols.map(n => { const st = S.staff.find(s => s.name === n); const c = active.filter(a => a.staff === n).length; return `<div class="sh">${esc(n)}<small>${esc(st?.role || "")}${c ? ` · ${c} booked` : ""}</small></div>`; }).join("");
+    h += `<div class="times" style="height:${H}px">`; for (let m = open; m < close; m += 60) h += `<span style="top:${(m - open) / 30 * SLOT}px">${time12(fromMin(m)).replace(":00", "")}</span>`; h += `</div>`;
+    const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
+    for (const n of cols) {
+      h += `<div class="col" data-staff="${esc(n)}" style="height:${H}px">`;
+      if (d === today() && nowMin > open && nowMin < close) h += `<div class="now-line" style="top:${(nowMin - open) / 30 * SLOT}px"></div>`;
+      for (const a of active.filter(a => a.staff === n)) {
+        const top = (toMin(a.time) - open) / 30 * SLOT, ht = Math.max(SLOT - 3, a.duration / 30 * SLOT - 3);
+        h += `<button type="button" class="appt ${a.status} ${S.selAppt === a.id ? "sel" : ""}" data-appt="${a.id}" style="top:${top + 1}px;height:${ht}px"><b>${time12(a.time)} · ${esc(a.clientName)}</b><span>${esc(a.serviceName)}</span>${ht > 50 ? `<span>AED ${fmt0(a.price)}${a.status !== "Booked" ? " · " + a.status : ""}</span>` : ""}</button>`;
+      }
+      h += `</div>`;
+    }
+    $("sched").innerHTML = h + `</div>`;
+  }
+  $("apptList").innerHTML = day.length ? `<table><thead><tr><th>Time</th><th>Client</th><th>Service</th><th>Staff</th><th class="r">AED</th><th>Status</th></tr></thead><tbody>${day.map(a => `<tr class="clickable ${S.selAppt === a.id ? "sel" : ""}" data-appt="${a.id}"><td class="num">${time12(a.time)}</td><td>${esc(a.clientName)}</td><td>${esc(a.serviceName)} <span class="sub">${a.duration} min</span></td><td>${esc(a.staff)}</td><td class="r num">${fmt(a.price)}</td><td><span class="pill ${a.status}">${a.status}</span></td></tr>`).join("")}</tbody></table>` : "";
+  renderApptDetail();
+}
+function renderApptDetail() {
+  const a = S.appointments.find(x => x.id === S.selAppt);
+  if (!a) { $("apptDetail").innerHTML = ""; return; }
+  const c = S.clients.find(x => x.id === a.clientId);
+  const st = clientStats()[a.clientId];
+  $("apptDetail").innerHTML = `<div class="detail">
+    <dl class="kv"><dt>Client</dt><dd>${esc(a.clientName)} ${c ? `<span class="pill ${tier(st)[1]}">${tier(st)[0]}</span>` : ""}</dd><dt>Phone</dt><dd>${esc(a.phone || c?.phone || "—")}</dd><dt>Service</dt><dd>${esc(a.serviceName)}</dd><dt>When</dt><dd>${prettyDate(a.date)}, ${time12(a.time)} · ${a.duration} min</dd><dt>Staff</dt><dd>${esc(a.staff)}</dd><dt>Price</dt><dd class="num">AED ${fmt(a.price)}</dd>${a.note ? `<dt>Note</dt><dd>${esc(a.note)}</dd>` : ""}${c?.notes ? `<dt>Client notes</dt><dd>${esc(c.notes)}</dd>` : ""}<dt>Status</dt><dd><span class="pill ${a.status}">${a.status}</span></dd></dl>
+    <div style="display:grid;gap:10px;align-content:start">
+      ${a.status === "Booked" ? `<div class="inline-edit" style="background:var(--surface)"><div class="field"><label for="coAmt">Charge (AED)</label><input type="number" id="coAmt" step="0.01" min="0" value="${a.price}"></div><div class="field"><label for="coPay">Paid by</label><select id="coPay"><option>Card</option><option>Cash</option><option>Bank transfer</option></select></div><button class="btn" data-act="checkout">Check out</button></div>` : ""}
+      <div class="actions" style="justify-content:flex-start">
+        ${a.status === "Completed" && a.txId ? `<button class="btn ghost small" data-act="receipt">Receipt</button>` : ""}
+        ${a.status === "Booked" ? `<button class="btn ghost small" data-act="edit">Edit</button><button class="btn ghost small" data-act="noshow">No-show</button><button class="btn danger small" data-act="cancel">Cancel booking</button>` : ""}
+        ${a.status !== "Booked" && a.status !== "Completed" ? `<button class="btn ghost small" data-act="reopen">Restore booking</button>` : ""}
+        <button class="btn ghost small" data-act="rebook">Book again</button>
+        <button class="btn danger small" data-act="delete">Delete</button>
+        <button class="btn ghost small" data-act="close">Close</button>
+      </div>
+    </div></div>`;
+}
+$("tab-appts").addEventListener("click", async e => {
+  const blk = e.target.closest("[data-appt]");
+  if (blk) { S.selAppt = blk.dataset.appt; renderAppts(); $("apptDetail").scrollIntoView({ block: "nearest", behavior: "smooth" }); return; }
+  const col = e.target.classList.contains("col") ? e.target : null;
+  if (col) {
+    const { open, close } = hours();
+    const m = Math.min(close - 15, open + Math.floor(e.offsetY / SLOT * 30 / 15) * 15);
+    openBooking({ staff: col.dataset.staff, time: fromMin(m), date: $("aDate").value });
+    $("bookForm").scrollIntoView({ block: "nearest", behavior: "smooth" });
+    return;
+  }
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const a = S.appointments.find(x => x.id === S.selAppt); if (!a) return;
+  const act = b.dataset.act;
+  if (act === "close") { S.selAppt = null; renderAppts(); }
+  if (act === "edit") openBooking({ id: a.id });
+  if (act === "rebook") openBooking({ clientName: a.clientName, phone: a.phone, staff: a.staff, date: addDays(a.date, 28) });
+  if (act === "noshow") { await patch("appointments", a.id, { status: "No-show" }); toast("Marked as no-show"); }
+  if (act === "reopen") { await patch("appointments", a.id, { status: "Booked" }); }
+  if (act === "cancel" && arm(b, "Confirm cancel")) { await patch("appointments", a.id, { status: "Cancelled" }); toast("Booking cancelled"); }
+  if (act === "delete" && arm(b)) { await remove("appointments", a.id); S.selAppt = null; toast("Booking deleted"); }
+  if (act === "receipt") openReceipt(a.txId);
+  if (act === "checkout") {
+    const amount = +$("coAmt").value || 0;
+    if (!(amount > 0)) { toast("Enter the amount charged."); return; }
+    b.disabled = true;
+    const txId = newId();
+    const tx = { type: "income", date: a.date, category: SERVICE_CATS.includes(a.category) ? a.category : "Other income", desc: a.serviceName, amount, vat: vatOf(amount, true), pay: $("coPay").value, staff: a.staff, clientId: a.clientId || "", clientName: a.clientName, apptId: a.id, invoiceNo: invoiceNo(), created: Date.now() };
+    await save("transactions", txId, tx);
+    await patch("appointments", a.id, { status: "Completed", txId, price: amount });
+    toast(`Checked out · AED ${fmt(amount)} recorded`);
+    openReceipt(txId, tx);
+  }
+});
+
+/* ---------- transactions ---------- */
+function txTable(list, withActions) {
+  if (!list.length) return `<p class="empty">No entries yet. Add your first sale or expense in the Income &amp; Expenses tab.</p>`;
+  return `<table><thead><tr><th>Date</th><th>Details</th><th>Paid by</th>${withActions ? "<th>Staff</th><th class='r'>VAT</th>" : ""}<th class="r">AED</th>${withActions ? "<th></th>" : ""}</tr></thead><tbody>${
+    list.map(t => `<tr><td class="num" style="white-space:nowrap">${prettyDate(t.date)}</td><td><span class="pill ${t.type === "income" ? "in" : "out"}">${esc(t.category)}</span> ${esc(t.desc)}${t.itemQty ? ` <span class="sub">×${t.itemQty}</span>` : ""}${t.clientName ? `<div class="sub">${esc(t.clientName)}</div>` : ""}</td><td>${esc(t.pay)}</td>${withActions ? `<td>${esc(t.staff || "")}</td><td class="r num">${fmt(t.vat)}</td>` : ""}<td class="r num ${t.type === "income" ? "pos" : "neg"}">${t.type === "income" ? "" : "−"}${fmt(t.amount)}</td>${withActions ? `<td><div class="actions">${t.type === "income" ? `<button class="btn small ghost" data-rcpt="${t.id}">Receipt</button>` : ""}<button class="btn small danger" data-deltx="${t.id}">Delete</button></div></td>` : ""}</tr>`).join("")
+  }</tbody></table>`;
+}
+function fillCats() {
+  const cats = S.type === "income" ? INCOME_CATS : EXPENSE_CATS;
+  const cur = $("txCat").value;
+  $("txCat").innerHTML = cats.map(c => `<option>${c}</option>`).join("");
+  if (cats.includes(cur)) $("txCat").value = cur;
+  $("clientField").hidden = S.type !== "income";
+  toggleItem();
+}
+function toggleItem() {
+  const isSale = S.type === "income" && $("txCat").value === "Product sale";
+  $("itemField").hidden = $("qtyField").hidden = !isSale;
+  if (isSale) {
+    const cur = $("txItem").value;
+    $("txItem").innerHTML = `<option value="">Choose product</option>` + S.inventory.filter(i => i.use === "Retail").map(i => `<option value="${i.id}">${esc(i.name)} (${i.qty} in stock)</option>`).join("");
+    $("txItem").value = cur;
+  }
+}
+$("typeSeg").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; S.type = b.dataset.v; [...$("typeSeg").children].forEach(x => x.classList.toggle("on", x === b)); fillCats(); });
+$("txCat").addEventListener("change", toggleItem);
+const priceFromItem = () => { const it = S.inventory.find(i => i.id === $("txItem").value); if (it) { $("txAmount").value = (it.price * (+$("txQty").value || 1)).toFixed(2); if (!$("txDesc").value) $("txDesc").value = it.name; } };
+$("txItem").addEventListener("change", priceFromItem); $("txQty").addEventListener("input", priceFromItem);
+
+$("txForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const amount = +$("txAmount").value;
+  if (!(amount > 0)) { toast("Enter an amount above zero."); return; }
+  const row = { type: S.type, date: $("txDate").value, category: $("txCat").value, desc: $("txDesc").value.trim(), amount, vat: vatOf(amount, $("txVat").checked), pay: $("txPay").value, staff: $("txStaff").value, created: Date.now() };
+  if (S.type === "income") {
+    row.invoiceNo = invoiceNo();
+    const c = await ensureClient($("txClient").value, "");
+    if (c) { row.clientId = c.id; row.clientName = c.name; }
+  }
+  const item = S.type === "income" && row.category === "Product sale" ? S.inventory.find(i => i.id === $("txItem").value) : null;
+  if (item) { row.itemId = item.id; row.itemQty = Math.max(1, +$("txQty").value || 1); }
+  await save("transactions", newId(), row);
+  if (item) await patch("inventory", item.id, { qty: item.qty - row.itemQty });
+  toast(item ? `Saved. ${item.name} stock reduced by ${row.itemQty}.` : "Entry saved");
+  $("txDesc").value = ""; $("txAmount").value = ""; $("txQty").value = 1; $("txItem").value = ""; $("txClient").value = "";
+});
+$("txTable").addEventListener("click", async e => {
+  const r = e.target.closest("[data-rcpt]"); if (r) { openReceipt(r.dataset.rcpt); return; }
+  const b = e.target.closest("[data-deltx]"); if (!b) return;
+  if (arm(b)) { await remove("transactions", b.dataset.deltx); toast("Entry deleted"); }
+});
+function renderMoney() {
+  fillCats(); staffOptions($("txStaff"), true);
+  const m = $("fMonth").value, ty = $("fType").value;
+  const list = S.transactions.filter(t => (!m || monthOf(t.date) === m) && (!ty || t.type === ty));
+  const s = sums(list);
+  $("txTable").innerHTML = txTable(list, true) + (list.length ? `<table><tbody><tr class="total"><td>Income AED ${fmt(s.inc)}</td><td>Expenses AED ${fmt(s.exp)}</td><td class="r ${s.net >= 0 ? "pos" : "neg"}">Net AED ${fmt(s.net)}</td></tr></tbody></table>` : "");
+}
+$("fMonth").addEventListener("change", renderMoney); $("fType").addEventListener("change", renderMoney);
+
+/* ---------- daily tally ---------- */
+function renderTally() {
+  const d = $("tDate").value || today();
+  const list = S.transactions.filter(t => t.date === d);
+  const by = (type, pay) => list.filter(t => t.type === type && t.pay === pay).reduce((a, t) => a + t.amount, 0);
+  const cashIn = by("income", "Cash"), cardIn = by("income", "Card"), bankIn = by("income", "Bank transfer");
+  const cashOut = by("expense", "Cash"), otherOut = list.filter(t => t.type === "expense" && t.pay !== "Cash").reduce((a, t) => a + t.amount, 0);
+  const float = +$("tFloat").value || 0, expected = float + cashIn - cashOut;
+  $("tallyBoxes").innerHTML = `
+    <div class="box"><h3>Takings</h3><div class="row"><span>Cash</span><span class="num">${fmt(cashIn)}</span></div><div class="row"><span>Card</span><span class="num">${fmt(cardIn)}</span></div><div class="row"><span>Bank transfer</span><span class="num">${fmt(bankIn)}</span></div><div class="row big"><span>Total income</span><span class="num pos">${fmt(cashIn + cardIn + bankIn)}</span></div></div>
+    <div class="box"><h3>Paid out</h3><div class="row"><span>From cash drawer</span><span class="num">${fmt(cashOut)}</span></div><div class="row"><span>Card / bank</span><span class="num">${fmt(otherOut)}</span></div><div class="row big"><span>Total expenses</span><span class="num neg">${fmt(cashOut + otherOut)}</span></div></div>
+    <div class="box"><h3>Cash drawer</h3><div class="row"><span>Opening float</span><span class="num">${fmt(float)}</span></div><div class="row"><span>+ Cash income</span><span class="num">${fmt(cashIn)}</span></div><div class="row"><span>− Cash expenses</span><span class="num">${fmt(cashOut)}</span></div><div class="row big"><span>Expected in drawer</span><span class="num">${fmt(expected)}</span></div></div>`;
+  const counted = $("tCounted").value === "" ? null : +$("tCounted").value;
+  const card = $("tCard").value === "" ? null : +$("tCard").value;
+  const vr = (label, diff) => diff === null ? "" : `<div class="row"><span>${label}</span><span class="num variance ${Math.abs(diff) < 0.01 ? "pos" : "neg"}">${Math.abs(diff) < 0.01 ? "Balanced" : (diff > 0 ? "Over " : "Short ") + fmt(Math.abs(diff))}</span></div>`;
+  $("varianceBox").innerHTML = (counted !== null || card !== null) ? `<div class="box"><h3>Variance</h3>${vr("Cash", counted === null ? null : counted - expected)}${vr("Card", card === null ? null : card - cardIn)}</div>` : "";
+  S._tally = { date: d, float, cashIn, cardIn, bankIn, cashOut, otherOut, expected };
+  $("closingsTable").innerHTML = S.closings.length ? `<table><thead><tr><th>Date</th><th class="r">Income</th><th class="r">Expected cash</th><th class="r">Counted</th><th class="r">Cash variance</th><th class="r">Card variance</th><th>Note</th></tr></thead><tbody>${
+    S.closings.map(c => { const cell = v => `<td class="r num ${Math.abs(v) < 0.01 ? "pos" : "neg"}">${Math.abs(v) < 0.01 ? "0.00" : (v > 0 ? "+" : "−") + fmt(Math.abs(v))}</td>`;
+      return `<tr><td>${prettyDate(c.date)}</td><td class="r num">${fmt(c.cashIn + c.cardIn + c.bankIn)}</td><td class="r num">${fmt(c.expected)}</td><td class="r num">${fmt(c.counted)}</td>${cell(c.counted - c.expected)}${cell(c.cardSettled - c.cardIn)}<td>${esc(c.note)}</td></tr>`; }).join("")}</tbody></table>` : `<p class="empty">No days closed yet. Count the drawer at the end of the day and save the closing above.</p>`;
+}
+["tDate", "tFloat", "tCounted", "tCard"].forEach(id => $(id).addEventListener("input", renderTally));
+$("closeForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  if ($("tCounted").value === "") { toast("Enter the cash you counted in the drawer."); return; }
+  const t = S._tally;
+  await save("closings", t.date, { ...t, counted: +$("tCounted").value, cardSettled: $("tCard").value === "" ? t.cardIn : +$("tCard").value, note: $("tNote").value.trim(), saved: Date.now() });
+  toast(`Closing saved for ${prettyDate(t.date)}`);
+});
+
+/* ---------- clients ---------- */
+function renderClients() {
+  const stats = clientStats(), m = monthOf(today());
+  const newThisMonth = S.clients.filter(c => c.created && monthOf(ymd(new Date(c.created))) === m).length;
+  const vip = S.clients.filter(c => tier(stats[c.id])[0] === "VIP").length;
+  const bdays = S.clients.filter(c => c.birthday && c.birthday.slice(5, 7) === m.slice(5)).length;
+  $("cKpis").innerHTML = [["Clients", S.clients.length], ["New this month", newThisMonth], ["VIP clients", vip], ["Birthdays this month", bdays]]
+    .map(([l, v]) => `<div class="kpi"><span class="label">${l}</span><span class="value num">${fmt0(v)}</span></div>`).join("");
+  const q = $("cFilter").value.toLowerCase();
+  const list = S.clients.filter(c => !q || c.name.toLowerCase().includes(q) || (c.phone || "").replace(/\s/g, "").includes(q.replace(/\s/g, "")));
+  $("clientTable").innerHTML = list.length ? `<table><thead><tr><th>Name</th><th>Phone</th><th class="r">Visits</th><th class="r">Spent (AED)</th><th>Last visit</th><th></th></tr></thead><tbody>${
+    list.map(c => { const st = stats[c.id]; const [t, cls] = tier(st); return `<tr class="clickable ${S.selClient === c.id ? "sel" : ""}" data-client="${c.id}"><td>${esc(c.name)}</td><td class="num">${esc(c.phone || "—")}</td><td class="r num">${st ? st.visits.size : 0}</td><td class="r num">${fmt(st?.spent || 0)}</td><td>${st ? prettyDate(st.last) : "—"}</td><td class="r"><span class="pill ${cls}">${t}</span></td></tr>`; }).join("")}</tbody></table>` : `<p class="empty">${S.clients.length ? "No clients match your search." : "No clients yet. Clients are added when you book them or add them above."}</p>`;
+  const c = S.clients.find(x => x.id === S.selClient);
+  if (!c) { $("clientDetail").innerHTML = ""; return; }
+  const hist = S.transactions.filter(t => t.clientId === c.id && t.type === "income");
+  const upcoming = S.appointments.filter(a => a.clientId === c.id && a.date >= today() && a.status === "Booked");
+  $("clientDetail").innerHTML = `<div class="detail">
+    <form id="clientEdit" style="display:grid;gap:10px;align-content:start">
+      <h3>${esc(c.name)}</h3>
+      <div class="field"><label for="ceName">Name</label><input id="ceName" value="${esc(c.name)}"></div>
+      <div class="field"><label for="cePhone">Phone</label><input id="cePhone" type="tel" value="${esc(c.phone)}"></div>
+      <div class="field"><label for="ceEmail">Email</label><input id="ceEmail" type="email" value="${esc(c.email)}"></div>
+      <div class="field"><label for="ceBirthday">Birthday</label><input id="ceBirthday" type="date" value="${esc(c.birthday)}"></div>
+      <div class="field"><label for="ceNotes">Notes</label><textarea id="ceNotes">${esc(c.notes)}</textarea></div>
+      <div class="actions" style="justify-content:flex-start"><button class="btn small" type="submit">Save changes</button><button class="btn ghost small" type="button" data-cact="book">Book appointment</button><button class="btn danger small" type="button" data-cact="delete">Delete client</button><button class="btn ghost small" type="button" data-cact="close">Close</button></div>
+    </form>
+    <div style="display:grid;gap:10px;align-content:start;min-width:0">
+      <h3>Upcoming</h3>${upcoming.length ? `<table><tbody>${upcoming.map(a => `<tr><td>${prettyDate(a.date)} ${time12(a.time)}</td><td>${esc(a.serviceName)}</td><td>${esc(a.staff)}</td></tr>`).join("")}</tbody></table>` : `<p class="sub">No upcoming bookings.</p>`}
+      <h3>History</h3>${hist.length ? `<div class="table-wrap"><table><tbody>${hist.slice(0, 12).map(t => `<tr><td>${prettyDate(t.date)}</td><td>${esc(t.desc || t.category)}<div class="sub">${esc(t.staff || "")}</div></td><td class="r num">${fmt(t.amount)}</td></tr>`).join("")}</tbody></table></div>` : `<p class="sub">No visits recorded yet.</p>`}
+    </div></div>`;
+}
+$("cFilter").addEventListener("input", renderClients);
+$("clientForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const name = $("cName").value.trim(); if (!name) return;
+  await save("clients", newId(), { name, phone: $("cPhone").value.trim(), email: $("cEmail").value.trim(), birthday: $("cBirthday").value, notes: $("cNotes").value.trim(), created: Date.now() });
+  toast(`${name} added`); ["cName","cPhone","cEmail","cBirthday","cNotes"].forEach(id => $(id).value = "");
+});
+$("tab-clients").addEventListener("click", async e => {
+  const row = e.target.closest("[data-client]"); if (row) { S.selClient = row.dataset.client; renderClients(); return; }
+  const b = e.target.closest("[data-cact]"); if (!b) return;
+  const c = S.clients.find(x => x.id === S.selClient); if (!c) return;
+  if (b.dataset.cact === "close") { S.selClient = null; renderClients(); }
+  if (b.dataset.cact === "book") { showTab("appts"); openBooking({ clientName: c.name, phone: c.phone, date: today() }); }
+  if (b.dataset.cact === "delete" && arm(b)) { await remove("clients", c.id); S.selClient = null; toast("Client deleted"); }
+});
+$("tab-clients").addEventListener("submit", async e => {
+  if (e.target.id !== "clientEdit") return; e.preventDefault();
+  await patch("clients", S.selClient, { name: $("ceName").value.trim(), phone: $("cePhone").value.trim(), email: $("ceEmail").value.trim(), birthday: $("ceBirthday").value, notes: $("ceNotes").value.trim() });
+  toast("Client updated");
+});
+
+/* ---------- inventory ---------- */
+function renderInventory() {
+  const val = S.inventory.reduce((a, i) => a + i.qty * i.cost, 0), retailVal = S.inventory.filter(i => i.use === "Retail").reduce((a, i) => a + i.qty * i.price, 0);
+  const low = S.inventory.filter(i => i.qty <= i.reorder).length;
+  $("invKpis").innerHTML = [["Products", S.inventory.length, ""], ["Stock value at cost", val, "AED"], ["Retail value", retailVal, "AED"], ["Need reorder", low, ""]]
+    .map(([l, v, u], i) => `<div class="kpi"><span class="label">${l}</span><span class="value num ${i === 3 && v ? "neg" : ""}">${u ? `<small>${u}</small>` : ""}${fmt0(v)}</span></div>`).join("");
+  const q = $("iFilter").value.toLowerCase();
+  const list = S.inventory.filter(i => !q || i.name.toLowerCase().includes(q));
+  $("invTable").innerHTML = list.length ? `<table><thead><tr><th>Product</th><th>Type</th><th class="r">In stock</th><th class="r">Reorder at</th><th class="r">Cost</th><th class="r">Price</th><th>Status</th><th></th></tr></thead><tbody>${
+    list.map(i => `<tr><td>${esc(i.name)}</td><td>${esc(i.use)}</td><td class="r num">${i.qty}</td><td class="r num">${i.reorder}</td><td class="r num">${fmt(i.cost)}</td><td class="r num">${i.use === "Retail" ? fmt(i.price) : "—"}</td><td>${i.qty <= 0 ? '<span class="pill out-stock">Out of stock</span>' : i.qty <= i.reorder ? '<span class="pill low">Reorder</span>' : '<span class="pill ok">OK</span>'}</td>
+      <td><div class="actions"><button class="btn small ghost" data-inv="use" data-id="${i.id}">Use 1</button><button class="btn small ghost" data-inv="restock" data-id="${i.id}">Restock</button><button class="btn small danger" data-inv="del" data-id="${i.id}">Delete</button></div></td></tr>`).join("")}</tbody></table>` : `<p class="empty">${S.inventory.length ? "No products match your search." : "No products yet. Add your first product above."}</p>`;
+  const it = S.inventory.find(i => i.id === S.editInv);
+  $("invEdit").innerHTML = it ? `<form class="inline-edit" id="restockForm"><div class="field"><span class="lbl">Restock</span><strong>${esc(it.name)}</strong></div><div class="field"><label for="rsQty">Qty received</label><input type="number" id="rsQty" min="1" step="1" value="6"></div><div class="field"><label for="rsCost">Total paid (AED)</label><input type="number" id="rsCost" min="0" step="0.01" value="${(it.cost * 6).toFixed(2)}"></div><label class="check"><input type="checkbox" id="rsExp" checked> Record as expense</label><div class="actions"><button class="btn" type="submit">Save</button><button class="btn ghost" type="button" id="rsCancel">Cancel</button></div></form>` : "";
+}
+$("iFilter").addEventListener("input", renderInventory);
+$("invForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  await save("inventory", newId(), { name: $("iName").value.trim(), use: $("iUse").value, qty: +$("iQty").value || 0, reorder: +$("iReorder").value || 0, cost: +$("iCost").value || 0, price: +$("iPrice").value || 0 });
+  toast("Product added"); $("iName").value = "";
+});
+$("tab-inventory").addEventListener("click", async e => {
+  if (e.target.id === "rsCancel") { S.editInv = null; renderInventory(); return; }
+  const b = e.target.closest("[data-inv]"); if (!b) return;
+  const it = S.inventory.find(i => i.id === b.dataset.id); if (!it) return;
+  if (b.dataset.inv === "use") { if (it.qty <= 0) { toast("Nothing left to use."); return; } await patch("inventory", it.id, { qty: it.qty - 1 }); toast(`${it.name}: ${it.qty - 1} left`); }
+  if (b.dataset.inv === "restock") { S.editInv = it.id; renderInventory(); $("rsQty").focus(); }
+  if (b.dataset.inv === "del" && arm(b)) { await remove("inventory", it.id); toast("Product deleted"); }
+});
+$("tab-inventory").addEventListener("input", e => { if (e.target.id === "rsQty") { const it = S.inventory.find(i => i.id === S.editInv); if (it) $("rsCost").value = (it.cost * (+e.target.value || 0)).toFixed(2); } });
+$("tab-inventory").addEventListener("submit", async e => {
+  if (e.target.id !== "restockForm") return; e.preventDefault();
+  const it = S.inventory.find(i => i.id === S.editInv); if (!it) return;
+  const n = Math.max(1, +$("rsQty").value || 1), paid = +$("rsCost").value || 0;
+  await patch("inventory", it.id, { qty: it.qty + n });
+  if ($("rsExp").checked && paid > 0) await save("transactions", newId(), { type: "expense", date: today(), category: "Products & supplies", desc: `Restock: ${it.name} ×${n}`, amount: paid, vat: vatOf(paid, true), pay: "Bank transfer", staff: "", created: Date.now() });
+  S.editInv = null; toast(`${it.name} restocked to ${it.qty + n}`);
+});
+
+/* ---------- staff & commission ---------- */
+function commission(month) {
+  const list = S.transactions.filter(t => t.type === "income" && monthOf(t.date) === month && t.staff);
+  return staffNames().map(name => {
+    const st = S.staff.find(s => s.name === name) || { svcPct: 0, prodPct: 0 };
+    const mine = list.filter(t => t.staff === name);
+    const svc = mine.filter(t => t.category !== "Product sale").reduce((a, t) => a + t.amount - (t.vat || 0), 0);
+    const prod = mine.filter(t => t.category === "Product sale").reduce((a, t) => a + t.amount - (t.vat || 0), 0);
+    const total = r2(svc * (st.svcPct || 0) / 100 + prod * (st.prodPct || 0) / 100);
+    const key = `${month}:${name}`;
+    return { name, st, svc, prod, total, key, recorded: S.transactions.find(t => t.commissionKey === key), count: mine.length };
+  });
+}
+function renderStaff() {
+  const m = $("sMonth").value || monthOf(today());
+  const rows = commission(m);
+  const tot = rows.reduce((a, r) => a + r.total, 0);
+  $("commTable").innerHTML = rows.length ? `<table><thead><tr><th>Staff</th><th class="r">Sales</th><th class="r">Services (ex VAT)</th><th class="r">Rate</th><th class="r">Products (ex VAT)</th><th class="r">Rate</th><th class="r">Commission</th><th></th></tr></thead><tbody>${
+    rows.map(r => `<tr><td>${esc(r.name)}</td><td class="r num">${r.count}</td><td class="r num">${fmt(r.svc)}</td><td class="r num">${r.st.svcPct || 0}%</td><td class="r num">${fmt(r.prod)}</td><td class="r num">${r.st.prodPct || 0}%</td><td class="r num"><strong>${fmt(r.total)}</strong></td><td class="r">${r.recorded ? `<span class="pill ok">Recorded</span>` : r.total > 0 ? `<button class="btn small ghost" data-comm="${esc(r.name)}">Record as expense</button>` : ""}</td></tr>`).join("")
+  }<tr class="total"><td colspan="6">Total commission, ${monthName(m)}</td><td class="r num">${fmt(tot)}</td><td></td></tr></tbody></table>` : `<p class="empty">Add your team below to work out commission.</p>`;
+  $("staffTable").innerHTML = S.staff.length ? `<table><thead><tr><th>Name</th><th>Role</th><th>Service %</th><th>Product %</th><th></th></tr></thead><tbody>${
+    S.staff.map(s => `<tr><td>${esc(s.name)}</td><td><input data-sf="role" data-id="${s.id}" value="${esc(s.role)}" aria-label="Role for ${esc(s.name)}" style="max-width:180px"></td><td><input type="number" min="0" max="100" step="0.5" data-sf="svcPct" data-id="${s.id}" value="${s.svcPct}" aria-label="Service commission for ${esc(s.name)}"></td><td><input type="number" min="0" max="100" step="0.5" data-sf="prodPct" data-id="${s.id}" value="${s.prodPct}" aria-label="Product commission for ${esc(s.name)}"></td><td class="r"><button class="btn small danger" data-delstaff="${s.id}">Remove</button></td></tr>`).join("")}</tbody></table>` : "";
+}
+$("sMonth").addEventListener("change", renderStaff);
+$("staffForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const name = $("stName").value.trim(); if (!name) return;
+  if (S.staff.some(s => s.name.toLowerCase() === name.toLowerCase())) { toast(`${name} is already on the team.`); return; }
+  await save("staff", newId(), { name, role: $("stRole").value.trim(), svcPct: +$("stSvc").value || 0, prodPct: +$("stProd").value || 0 });
+  toast(`${name} added to the team`); $("stName").value = ""; $("stRole").value = "";
+});
+$("tab-staff").addEventListener("change", async e => {
+  const f = e.target.dataset.sf; if (!f) return;
+  await patch("staff", e.target.dataset.id, { [f]: f === "role" ? e.target.value.trim() : +e.target.value || 0 });
+  toast("Saved");
+});
+$("tab-staff").addEventListener("click", async e => {
+  const d = e.target.closest("[data-delstaff]"); if (d && arm(d)) { await remove("staff", d.dataset.delstaff); toast("Staff member removed"); return; }
+  const b = e.target.closest("[data-comm]"); if (!b) return;
+  const m = $("sMonth").value || monthOf(today());
+  const r = commission(m).find(x => x.name === b.dataset.comm); if (!r) return;
+  b.disabled = true;
+  const [y, mo] = m.split("-").map(Number); const last = ymd(new Date(y, mo, 0));
+  await save("transactions", newId(), { type: "expense", date: last < today() ? last : today(), category: "Salaries & commission", desc: `Commission – ${r.name} – ${monthName(m)}`, amount: r.total, vat: 0, pay: "Bank transfer", staff: r.name, commissionKey: r.key, created: Date.now() });
+  toast(`Commission of AED ${fmt(r.total)} recorded for ${r.name}`);
+});
+
+/* ---------- reports ---------- */
+function renderReports() {
+  const m = $("rMonth").value || monthOf(today());
+  const list = S.transactions.filter(t => monthOf(t.date) === m);
+  const s = sums(list);
+  $("rKpis").innerHTML = [["Income", s.inc], ["Expenses", s.exp], ["Net profit", s.net], ["VAT payable", s.outVat - s.inVat]]
+    .map(([l, v], i) => `<div class="kpi"><span class="label">${l}</span><span class="value num ${i === 2 ? (v >= 0 ? "pos" : "neg") : ""}"><small>AED</small>${fmt(v)}</span><span class="delta">${monthName(m)}</span></div>`).join("");
+  const rows = obj => Object.entries(obj).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="r num">${fmt(v)}</td></tr>`).join("");
+  const inc = groupBy(list.filter(t => t.type === "income"), t => t.category), exp = groupBy(list.filter(t => t.type === "expense"), t => t.category);
+  $("rPL").innerHTML = list.length ? `<table><thead><tr><th>Income</th><th class="r">AED</th></tr></thead><tbody>${rows(inc)}<tr class="total"><td>Total income</td><td class="r num pos">${fmt(s.inc)}</td></tr></tbody></table>
+    <table style="margin-top:14px"><thead><tr><th>Expenses</th><th class="r">AED</th></tr></thead><tbody>${rows(exp)}<tr class="total"><td>Total expenses</td><td class="r num neg">${fmt(s.exp)}</td></tr><tr class="total"><td>Net profit</td><td class="r num ${s.net >= 0 ? "pos" : "neg"}">${fmt(s.net)}</td></tr></tbody></table>` : `<p class="empty">No entries in ${monthName(m)}.</p>`;
+  $("rVat").innerHTML = `<table><tbody><tr><td>Output VAT on sales</td><td class="r num">${fmt(s.outVat)}</td></tr><tr><td>Input VAT on expenses</td><td class="r num">${fmt(s.inVat)}</td></tr><tr class="total"><td>Net VAT ${s.outVat - s.inVat >= 0 ? "payable" : "refundable"}</td><td class="r num">${fmt(Math.abs(s.outVat - s.inVat))}</td></tr></tbody></table><p class="sub" style="margin-top:6px">An estimate from the amounts entered. Confirm figures with your accountant before filing with the FTA.</p>`;
+  const pay = groupBy(list.filter(t => t.type === "income"), t => t.pay);
+  $("rPay").innerHTML = Object.keys(pay).length ? `<table><tbody>${rows(pay)}</tbody></table>` : `<p class="empty">No income this month.</p>`;
+  const cl = Object.entries(groupBy(list.filter(t => t.type === "income" && t.clientName), t => t.clientName)).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  $("rClients").innerHTML = cl.length ? `<table><tbody>${cl.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="r num">${fmt(v)}</td></tr>`).join("")}</tbody></table>` : `<p class="empty">Link sales to clients to see your top spenders.</p>`;
+}
+$("rMonth").addEventListener("change", renderReports);
+$("exportCsv").addEventListener("click", async () => {
+  const m = $("rMonth").value || monthOf(today());
+  const list = S.transactions.filter(t => monthOf(t.date) === m).sort((a, b) => a.date.localeCompare(b.date));
+  const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const csv = ["Date,Invoice,Type,Category,Description,Client,Paid by,Staff,Amount AED,VAT AED", ...list.map(t => [t.date, t.invoiceNo, t.type, t.category, t.desc, t.clientName, t.pay, t.staff, t.amount.toFixed(2), (t.vat || 0).toFixed(2)].map(q).join(","))].join("\n");
+  try { await downloads.save({ filename: `salon-ledger-${m}.csv`, data: csv }); } catch (e) { if (e?.code !== "declined") toast("The export could not be saved."); }
+});
+
+/* ---------- settings ---------- */
+function renderSettings() {
+  const z = S.settings;
+  if (!document.activeElement || !$("bizForm").contains(document.activeElement)) {
+    $("zName").value = z.name || ""; $("zTrn").value = z.trn || ""; $("zAddr").value = z.address || ""; $("zPhone").value = z.phone || "";
+    $("zOpen").value = z.openHour ?? 10; $("zClose").value = z.closeHour ?? 22; $("zFooter").value = z.footer || "";
+  }
+  if (!$("vCat").options.length) $("vCat").innerHTML = SERVICE_CATS.map(c => `<option>${c}</option>`).join("");
+  $("svcTable").innerHTML = S.services.length ? `<table><thead><tr><th>Service</th><th>Category</th><th>Minutes</th><th>Price (AED)</th><th></th></tr></thead><tbody>${
+    S.services.map(s => `<tr><td>${esc(s.name)}</td><td class="sub">${esc(s.category)}</td><td><input type="number" min="15" step="15" data-vf="duration" data-id="${s.id}" value="${s.duration}" aria-label="Minutes for ${esc(s.name)}"></td><td><input type="number" min="0" step="0.01" data-vf="price" data-id="${s.id}" value="${s.price}" aria-label="Price for ${esc(s.name)}"></td><td class="r"><button class="btn small danger" data-delsvc="${s.id}">Delete</button></td></tr>`).join("")}</tbody></table>` : `<p class="empty">No services yet. Add your menu above so bookings fill in price and time.</p>`;
+}
+$("bizForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const open = Math.min(23, Math.max(0, +$("zOpen").value || 10)), close = Math.min(24, Math.max(open + 1, +$("zClose").value || 22));
+  const data = { name: $("zName").value.trim(), trn: $("zTrn").value.trim(), address: $("zAddr").value.trim(), phone: $("zPhone").value.trim(), openHour: open, closeHour: close, footer: $("zFooter").value.trim() };
+  if (!db) { S.settings = data; renderAll(); toast("Details saved"); return; }
+  try { await db.doc("settings/business").set(data); toast("Details saved"); } catch { toast("Could not save. Try again."); }
+});
+$("svcForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  await save("services", newId(), { name: $("vName").value.trim(), category: $("vCat").value, duration: +$("vDur").value || 60, price: +$("vPrice").value || 0 });
+  toast("Service added"); $("vName").value = "";
+});
+$("tab-settings").addEventListener("change", async e => { const f = e.target.dataset.vf; if (!f) return; await patch("services", e.target.dataset.id, { [f]: +e.target.value || 0 }); toast("Saved"); });
+$("tab-settings").addEventListener("click", async e => { const b = e.target.closest("[data-delsvc]"); if (b && arm(b)) { await remove("services", b.dataset.delsvc); toast("Service deleted"); } });
+
+/* ---------- receipts ---------- */
+function receiptData(t) {
+  const z = S.settings, inv = t.invoiceNo || `INV-${t.id.slice(0, 8).toUpperCase()}`;
+  return { z, inv, isTax: !!z.trn, net: r2(t.amount - (t.vat || 0)), t };
+}
+function openReceipt(id, fallback) {
+  const t = S.transactions.find(x => x.id === id) || (fallback && { ...fallback, id });
+  if (!t) return;
+  S.rcpt = t;
+  const { z, inv, isTax, net } = receiptData(t);
+  $("receipt").innerHTML = `
+    <h3>${esc(z.name || "Your salon name")}</h3>
+    <div class="c">${[z.address, z.phone].filter(Boolean).map(esc).join("<br>") || "Add your address in Settings"}${z.trn ? `<br>TRN ${esc(z.trn)}` : ""}</div>
+    <div class="doc-type">${isTax ? "TAX INVOICE" : "RECEIPT"}</div>
+    <div class="row"><span>Invoice</span><span class="num">${esc(inv)}</span></div>
+    <div class="row"><span>Date</span><span>${longDate(t.date)}</span></div>
+    ${t.clientName ? `<div class="row"><span>Client</span><span>${esc(t.clientName)}</span></div>` : ""}
+    ${t.staff ? `<div class="row"><span>Served by</span><span>${esc(t.staff)}</span></div>` : ""}
+    <div class="row" style="border-top:1px solid #D5DDD8;padding-top:8px"><span>${esc(t.desc || t.category)}${t.itemQty ? ` ×${t.itemQty}` : ""}</span><span class="num">${fmt(net)}</span></div>
+    <div class="row"><span>Subtotal excl. VAT</span><span class="num">${fmt(net)}</span></div>
+    <div class="row"><span>VAT 5%</span><span class="num">${fmt(t.vat || 0)}</span></div>
+    <div class="row big"><span>Total AED</span><span class="num">${fmt(t.amount)}</span></div>
+    <div class="row"><span>Paid by</span><span>${esc(t.pay)}</span></div>
+    <div class="c">${esc(z.footer || "Thank you for visiting")}</div>`;
+  $("rcptTitle").textContent = isTax ? "Tax invoice" : "Receipt";
+  $("rcptHint").hidden = !!(z.name && z.trn);
+  $("rcptHint").textContent = "Add your business name and TRN in Settings so receipts show as tax invoices.";
+  $("rcptPdf").hidden = !(downloads && window.jspdf);
+  $("overlay").hidden = false; $("rcptClose").focus();
+}
+const closeReceipt = () => { $("overlay").hidden = true; S.rcpt = null; };
+$("rcptClose").addEventListener("click", closeReceipt);
+$("overlay").addEventListener("click", e => { if (e.target.id === "overlay") closeReceipt(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("overlay").hidden) closeReceipt(); });
+function receiptText(t) {
+  const { z, inv, isTax, net } = receiptData(t);
+  return [z.name || "Receipt", z.address, z.phone, z.trn && `TRN ${z.trn}`, "", isTax ? "TAX INVOICE" : "RECEIPT", `Invoice: ${inv}`, `Date: ${longDate(t.date)}`, t.clientName && `Client: ${t.clientName}`, "",
+    `${t.desc || t.category}${t.itemQty ? ` x${t.itemQty}` : ""}: AED ${fmt(net)}`, `VAT 5%: AED ${fmt(t.vat || 0)}`, `Total: AED ${fmt(t.amount)}`, `Paid by ${t.pay}`, "", z.footer || "Thank you for visiting"].filter(x => x !== undefined && x !== null && x !== false).join("\n");
+}
+$("rcptCopy").addEventListener("click", async () => {
+  const txt = receiptText(S.rcpt);
+  try { await navigator.clipboard.writeText(txt); toast("Receipt copied. Paste it into WhatsApp or email."); }
+  catch { const r = document.createRange(); r.selectNodeContents($("receipt")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Text selected. Press Ctrl+C or Cmd+C to copy."); }
+});
+$("rcptPdf").addEventListener("click", async () => {
+  const t = S.rcpt; if (!t) return;
+  const { z, inv, isTax, net } = receiptData(t);
+  const doc = new window.jspdf.jsPDF({ unit: "mm", format: [80, 150] });
+  let y = 10; const W = 80, L = 6, R = W - 6;
+  const center = (s, size = 9, bold = false) => { doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(size); doc.splitTextToSize(s, W - 12).forEach(line => { doc.text(line, W / 2, y, { align: "center" }); y += size * 0.45; }); };
+  const row = (a, b, bold = false) => { doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(bold ? 10 : 8.5); const lines = doc.splitTextToSize(a, 46); doc.text(lines, L, y); doc.text(b, R, y, { align: "right" }); y += lines.length * 4 + 1; };
+  const rule = () => { doc.setDrawColor(180); doc.line(L, y - 2, R, y - 2); y += 2; };
+  center(z.name || "Receipt", 13, true); y += 1;
+  [z.address, z.phone, z.trn && `TRN ${z.trn}`].filter(Boolean).forEach(s => center(s, 8));
+  y += 3; rule(); center(isTax ? "TAX INVOICE" : "RECEIPT", 9, true); y += 2; rule();
+  row("Invoice", inv); row("Date", longDate(t.date)); if (t.clientName) row("Client", t.clientName); if (t.staff) row("Served by", t.staff);
+  y += 2; rule();
+  row(`${t.desc || t.category}${t.itemQty ? ` x${t.itemQty}` : ""}`, fmt(net));
+  y += 1; rule();
+  row("Subtotal excl. VAT", fmt(net)); row("VAT 5%", fmt(t.vat || 0)); row("Total AED", fmt(t.amount), true); row("Paid by", t.pay);
+  y += 4; center(z.footer || "Thank you for visiting", 8.5);
+  try { await downloads.save({ filename: `${inv}.pdf`, data: doc.output("arraybuffer") }); }
+  catch (e) { if (e?.code !== "declined") toast("The PDF could not be saved."); }
+});
+
+/* ---------- sample data ---------- */
+$("clearSample").addEventListener("click", async e => {
+  const b = e.currentTarget;
+  if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Confirm: delete all sample data"; return; }
+  b.disabled = true;
+  for (const col of COLS) for (const x of S[col].filter(x => x.sample)) await remove(col, x.id);
+  toast("Sample data cleared");
+});
+
+/* ---------- render ---------- */
+function renderAll() {
+  $("sampleBar").hidden = !COLS.some(c => S[c].some(x => x.sample));
+  $("brandName").textContent = S.settings.name || "Salon & Spa Ledger";
+  $("clientList").innerHTML = S.clients.map(c => `<option value="${esc(c.name)}">${esc(c.phone || "")}</option>`).join("");
+  ({ dashboard: renderDashboard, appts: renderAppts, money: renderMoney, tally: renderTally, clients: renderClients, inventory: renderInventory, staff: renderStaff, reports: renderReports, settings: renderSettings })[S.tab]?.();
+}
+
+/* ---------- account, install, backup ---------- */
+$("signOut").addEventListener("click", () => LedgerSync.signOut());
+$("copySetup").addEventListener("click", async () => {
+  const link = LedgerSync.setupLink();
+  try { await navigator.clipboard.writeText(link); toast("Setup link copied. Send it to the other device."); }
+  catch { prompt("Copy this setup link:", link); }
+});
+$("backupBtn").addEventListener("click", () => downloads.save({ filename: `salon-ledger-backup-${today()}.json`, data: JSON.stringify({ app: "salon-ledger", exported: new Date().toISOString(), data: LedgerSync.exportAll() }) }));
+$("restoreFile").addEventListener("change", async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const j = JSON.parse(await f.text()); const n = LedgerSync.importAll(j.data || j); toast(`Restored ${n} records`); }
+  catch { toast("That file is not a Salon Ledger backup."); }
+  e.target.value = "";
+});
+$("rcptPrint").addEventListener("click", () => window.print());
+let installEvt = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; $("installBtn").hidden = false; renderInstallHelp(); });
+window.addEventListener("appinstalled", () => { $("installBtn").hidden = true; toast("App installed"); renderInstallHelp(); });
+$("installBtn").addEventListener("click", async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $("installBtn").hidden = true; });
+function renderInstallHelp() {
+  const ua = navigator.userAgent, standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  $("installHelp").textContent = standalone ? "Installed. You are using the app version on this device."
+    : /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? "In Safari, tap the Share button, then Add to Home Screen."
+    : installEvt ? "Press Install app at the top of the screen."
+    : /Android/.test(ua) ? "In Chrome, open the ⋮ menu, then Install app or Add to Home screen."
+    : "In Chrome or Edge, click the install icon at the right end of the address bar, or open the browser menu and choose Install.";
+}
+renderInstallHelp();
+if (isNative) { $("rcptPrint").hidden = true; $("installBtn").hidden = true; $("installHelp").textContent = "You are using the Android app. PDFs, CSV exports and backups open the share menu, so you can save them to Files or send them by WhatsApp or email."; }
+else if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
+
+/* ---------- boot ---------- */
+["txDate", "tDate", "aDate"].forEach(id => $(id).value = today());
+["fMonth", "rMonth", "sMonth"].forEach(id => $(id).value = monthOf(today()));
+fillCats();
+try { const t = localStorage.getItem("ledgerTab"); if (t && $("tab-" + t)) S.tab = t; } catch {}
+let started = false;
+window.startLedger = () => {
+  if (started) return; started = true;
+  db = window.LedgerDB;
+  showTab(S.tab);
+  for (const col of COLS) db.collection(col).onSnapshot(snap => {
+    S[col] = snap.docs.map(d => ({ ...d.data(), id: d.id })).sort(SORTS[col] || (() => 0));
+    queueRender();
+  });
+  db.doc("settings/business").onSnapshot(d => { S.settings = d.exists ? d.data() : {}; queueRender(); });
+  $("exportCsv").hidden = false;
+};
+</script>
+
+</body>
+</html>
