@@ -1,6 +1,6 @@
-/* Optional: paste your Supabase details here before uploading, and no device
-   will ever ask for them. Leave empty to enter them in the app instead. */
+/* Supabase connection for this salon. The publishable key is safe to ship in the app:
+   it only lets people reach the sign-in screen; records need a staff login. */
 window.SALON_CONFIG = {
-  supabaseUrl: "",
-  supabaseAnonKey: ""
+  supabaseUrl: "https://sitoybnovvzjrafasyay.supabase.co",
+  supabaseAnonKey: "sb_publishable_4qabgM7ZNh47p-7aUZQpOw_f9y-jOyf"
 };
