@@ -60,16 +60,16 @@ jobs:
             cp app/build/outputs/apk/debug/app-debug.apk ../dist/SalonLedger-TEST-1.0.${{ github.run_number }}.apk
           fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: SalonLedger-apk
           path: dist/*.apk
 
       - name: Publish as a release
-        if: env.KEYSTORE_FILE != ''
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: Salon Ledger 1.0.${{ github.run_number }}
+          tag_name: ${{ env.KEYSTORE_FILE != '' && format('v1.0.{0}', github.run_number) || format('test-1.0.{0}', github.run_number) }}
+          name: ${{ env.KEYSTORE_FILE != '' && format('Salon Ledger 1.0.{0}', github.run_number) || format('Salon Ledger TEST 1.0.{0} (temporary key)', github.run_number) }}
+          prerelease: ${{ env.KEYSTORE_FILE == '' }}
           body: Download the .apk file below and open it on your Android phone or tablet to install or update.
           files: dist/*.apk
