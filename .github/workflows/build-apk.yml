@@ -37,10 +37,10 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            echo "KEYSTORE_FILE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
           else
-            echo "::error::No signing key found. Add the ANDROID_KEYSTORE_BASE64 secret."; exit 1
+            echo "::warning::No signing key secret yet, so this build is a TEST version signed with a temporary key."
           fi
-          echo "KEYSTORE_FILE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
 
       - name: Build signed APK
         working-directory: android
@@ -50,9 +50,14 @@ jobs:
           VERSION_NAME: 1.0.${{ github.run_number }}
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
           mkdir -p ../dist
-          cp app/build/outputs/apk/release/app-release.apk ../dist/SalonLedger-1.0.${{ github.run_number }}.apk
+          if [ -n "$KEYSTORE_FILE" ]; then
+            ./gradlew assembleRelease --no-daemon
+            cp app/build/outputs/apk/release/app-release.apk ../dist/SalonLedger-1.0.${{ github.run_number }}.apk
+          else
+            ./gradlew assembleDebug --no-daemon
+            cp app/build/outputs/apk/debug/app-debug.apk ../dist/SalonLedger-TEST-1.0.${{ github.run_number }}.apk
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
@@ -60,6 +65,7 @@ jobs:
           path: dist/*.apk
 
       - name: Publish as a release
+        if: env.KEYSTORE_FILE != ''
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
