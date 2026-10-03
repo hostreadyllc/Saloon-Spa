@@ -53,10 +53,10 @@ jobs:
           chmod +x gradlew
           mkdir -p ../dist
           if [ -n "$KEYSTORE_FILE" ]; then
-            ./gradlew assembleRelease --no-daemon
+            ./gradlew assembleRelease --no-daemon > ../gradle.log 2>&1 || { grep -E "error|FAILURE|What went wrong|wrong:|Exception|> " ../gradle.log | head -40 | sed 's/^/::error::/'; exit 1; }
             cp app/build/outputs/apk/release/app-release.apk ../dist/SalonLedger-1.0.${{ github.run_number }}.apk
           else
-            ./gradlew assembleDebug --no-daemon
+            ./gradlew assembleDebug --no-daemon > ../gradle.log 2>&1 || { grep -E "error|FAILURE|What went wrong|wrong:|Exception|> " ../gradle.log | head -40 | sed 's/^/::error::/'; exit 1; }
             cp app/build/outputs/apk/debug/app-debug.apk ../dist/SalonLedger-TEST-1.0.${{ github.run_number }}.apk
           fi
 
