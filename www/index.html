@@ -71,6 +71,34 @@ img { max-width: 100%; }
 .gate-card form { display: grid; gap: 12px; }
 .gate-card ol { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; color: var(--muted); font-size: .88rem; }
 .linkbtn { background: none; border: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; padding: 0; justify-self: start; }
+.copyright { text-align: center; color: var(--muted); font-size: .78rem; margin-top: 18px; }
+.gate { align-content: center; }
+.appfoot { max-width: 1240px; margin: 0 auto; padding: 8px 16px 28px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; color: var(--muted); font-size: .78rem; }
+.banner { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
+.banner.bad { background: var(--danger-soft); }
+.banner.info { background: var(--booked); color: var(--fg); }
+body.role-staff .owner-only, body.role-staff [data-tab="reports"], body.role-staff [data-tab="staff"], body.role-staff [data-tab="dashboard"] { display: none !important; }
+body.readonly .entry button[type="submit"], body.readonly #tSave { opacity: .5; }
+.steps { display: grid; gap: 14px; }
+.step { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: start; background: var(--surface-2); border-radius: 8px; padding: 14px; }
+.step-n { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-weight: 700; }
+.step-body { display: grid; gap: 10px; min-width: 0; }
+.step-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.result { font-weight: 600; border-radius: 6px; padding: 8px 10px; }
+.result:empty { display: none; }
+.result.ok { background: var(--accent-soft); color: var(--income); }
+.result.bad { background: var(--danger-soft); color: var(--danger); }
+.result small { display: block; font-weight: 500; color: var(--fg); margin-top: 2px; }
+.cardlist summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: .88rem; }
+.alert-sheet { border-top: 6px solid var(--accent); }
+.alert-time { font-size: .8rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .08em; }
+@media (prefers-reduced-motion: no-preference) { .alert-sheet { animation: pop .25s ease-out; } @keyframes pop { from { transform: scale(.94); opacity: 0; } to { transform: none; opacity: 1; } } }
+.ai-panel { max-width: 760px; }
+.ai-panel .pill { justify-self: start; }
+.ai-examples { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.ai-chat { display: flex; gap: 8px; opacity: .6; }
+.dup-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.badge-vip { background: var(--fg); color: var(--bg); padding: 1px 6px; border-radius: 4px; font-size: .68rem; font-weight: 700; margin-left: 4px; vertical-align: 1px; }
 @media print {
   @page { margin: 4mm; }
   body { background: #fff; }
@@ -216,31 +244,34 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 <body>
 
 <div class="gate" id="gate">
-  <div class="gate-card" id="gateSetup" hidden>
+  <div class="gate-card" id="gateLoading">
     <img src="icons/icon-192.png" alt="">
-    <h1>Connect your database</h1>
-    <p class="sub">This is a one-time step on each device. Your records are kept in your own Supabase project, so every PC, phone and tablet sees the same data.</p>
-    <ol><li>Open your project at supabase.com</li><li>Go to Project Settings, then API</li><li>Copy the Project URL and the anon public key</li></ol>
-    <form id="setupForm">
-      <div class="field"><label for="suCode">Setup code from another device</label><input id="suCode" placeholder="Paste it here, or fill in the two boxes below" autocomplete="off"></div>
-      <div class="field"><label for="suUrl">Project URL</label><input id="suUrl" placeholder="https://abcdxyz.supabase.co" autocomplete="off"></div>
-      <div class="field"><label for="suKey">Anon public key</label><input id="suKey" placeholder="eyJhbGciOi…" autocomplete="off"></div>
-      <button class="btn" type="submit">Connect</button>
-      <p class="sub" id="suMsg" hidden></p>
+    <h1>Salon Ledger</h1>
+    <p class="sub">Loading…</p>
+  </div>
+  <div class="gate-card" id="gateCode" hidden>
+    <img src="icons/icon-192.png" alt="">
+    <h1>Enter your Salon Code</h1>
+    <p class="sub">You received this code from Hostready when your salon was registered, for example SAL-4821.</p>
+    <form id="codeForm">
+      <div class="field"><label for="scCode">Salon Code</label><input id="scCode" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="SAL-0000" required></div>
+      <button class="btn" type="submit">Continue</button>
+      <p class="sub" id="scMsg" hidden></p>
     </form>
-    <p class="sub">Already set up on another device? Open Settings there, press Copy setup code, and paste it in the first box.</p>
   </div>
   <div class="gate-card" id="gateLogin" hidden>
     <img src="icons/icon-192.png" alt="">
-    <h1>Sign in</h1>
+    <div><p class="sub" style="margin:0">Salon</p><h2 id="liSalon" style="font-size:1.25rem"></h2><p class="sub" style="margin:0">Code <span id="liCodeShow"></span> · <button class="linkbtn" id="liChange" type="button">Change</button></p></div>
+    <h1 id="liTitle">Sign in</h1>
     <form id="loginForm">
       <div class="field"><label for="liEmail">Email</label><input id="liEmail" type="email" autocomplete="username" required></div>
       <div class="field"><label for="liPass">Password</label><input id="liPass" type="password" autocomplete="current-password" required></div>
-      <button class="btn" type="submit">Sign in</button>
+      <div class="field" id="liConfirmRow" hidden><label for="liPass2">Confirm password</label><input id="liPass2" type="password" autocomplete="new-password"></div>
+      <button class="btn" type="submit" id="liSubmit">Sign in</button>
       <p class="sub" id="liMsg" hidden></p>
     </form>
+    <button class="linkbtn" id="liActivate" type="button">First time? Activate your account</button>
     <button class="linkbtn" id="liForgot" type="button">Forgot password</button>
-    <button class="linkbtn" id="liChange" type="button">Connect a different database</button>
   </div>
   <div class="gate-card" id="gateReset" hidden>
     <h1>Set a new password</h1>
@@ -250,11 +281,19 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
       <p class="sub" id="rpMsg" hidden></p>
     </form>
   </div>
+  <div class="gate-card" id="gateBlocked" hidden>
+    <img src="icons/icon-192.png" alt="">
+    <h1 id="blTitle"></h1>
+    <p id="blText"></p>
+    <p class="sub" id="blDevice"></p>
+    <div class="actions" style="justify-content:flex-start"><button class="btn" id="blRetry" type="button">Check again</button><button class="btn ghost" id="blSignOut" type="button">Sign out</button></div>
+  </div>
+  <p class="copyright">© 2026 Hostready LLC. All rights reserved.</p>
 </div>
 <div id="appShell" hidden>
 <header class="topbar">
   <div class="topbar-inner">
-    <div class="brand"><h1 id="brandName">Salon &amp; Spa Ledger</h1><span class="sync ok" id="syncStatus">Synced</span><button class="btn small ghost" id="installBtn" hidden>Install app</button></div>
+    <div class="brand"><h1 id="brandName">Salon Ledger</h1><span class="sync ok" id="syncStatus">Synced</span><span class="pill" id="rolePill" hidden></span><button class="btn small ghost" id="installBtn" hidden>Install app</button></div>
     <nav role="tablist" id="tabs">
       <button role="tab" data-tab="dashboard" aria-selected="true">Dashboard</button>
       <button role="tab" data-tab="appts" aria-selected="false">Appointments</button>
@@ -265,12 +304,16 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
       <button role="tab" data-tab="staff" aria-selected="false">Staff &amp; Commission</button>
       <button role="tab" data-tab="reports" aria-selected="false">Reports</button>
       <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
+      <button role="tab" data-tab="ai" aria-selected="false">AI Assistant</button>
+      <button role="tab" data-tab="admin" aria-selected="false" hidden>Hostready Admin</button>
     </nav>
   </div>
 </header>
 
 <main>
   <div class="notice" id="offline" hidden></div>
+  <div class="notice banner" id="subBanner" hidden></div>
+  <div class="notice banner" id="devBanner" hidden></div>
   <div class="notice sample" id="sampleBar" hidden>
     <span>You are looking at <strong>sample data</strong>: example staff, services, clients and bookings. Clear it when you are ready to enter your own.</span>
     <button class="btn small ghost" id="clearSample">Clear sample data</button>
@@ -351,7 +394,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
         <div class="field" id="qtyField" hidden><label for="txQty">Qty</label><input type="number" id="txQty" min="1" step="1" value="1"></div>
         <div class="field"><label for="txDesc">Description</label><input id="txDesc" placeholder="e.g. Keratin treatment"></div>
         <div class="field"><label for="txAmount">Amount (AED)</label><input type="number" id="txAmount" min="0" step="0.01" required placeholder="0.00"></div>
-        <div class="field"><label for="txPay">Paid by</label><select id="txPay"><option>Cash</option><option>Card</option><option>Bank transfer</option></select></div>
+        <div class="field"><label for="txPay">Paid by</label><select id="txPay" required></select></div>
+        <div class="field" id="splitCashF" hidden><label for="txCashPart">Cash part</label><input type="number" id="txCashPart" min="0" step="0.01"></div>
+        <div class="field" id="splitCardF" hidden><label for="txCardPart">Card part</label><input type="number" id="txCardPart" min="0" step="0.01"></div>
         <div class="field"><label for="txStaff">Staff</label><select id="txStaff"></select></div>
         <div class="field" id="clientField"><label for="txClient">Client</label><input id="txClient" list="clientList" placeholder="Optional"></div>
         <label class="check"><input type="checkbox" id="txVat" checked> Amount includes 5% VAT</label>
@@ -372,18 +417,48 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
   <!-- DAILY TALLY -->
   <section id="tab-tally" class="tabpanel" hidden>
     <div class="panel">
-      <div class="panel-head"><h2>Day closing</h2>
+      <div class="panel-head"><div style="display:grid;gap:2px"><h2>Day closing</h2><span class="sub" id="tClosedBy"></span></div>
         <div class="toolbar"><div class="field"><label for="tDate">Date</label><input type="date" id="tDate"></div></div>
       </div>
       <div class="tally" id="tallyBoxes"></div>
-      <form class="entry" id="closeForm">
-        <div class="field"><label for="tFloat">Opening cash float</label><input type="number" id="tFloat" step="0.01" min="0" value="500"></div>
-        <div class="field"><label for="tCounted">Cash counted in drawer</label><input type="number" id="tCounted" step="0.01" min="0" placeholder="0.00"></div>
-        <div class="field"><label for="tCard">Card machine settlement</label><input type="number" id="tCard" step="0.01" min="0" placeholder="0.00"></div>
-        <div class="field"><label for="tNote">Note</label><input id="tNote" placeholder="Optional"></div>
-        <button class="btn" type="submit">Save closing</button>
+      <div class="notice" id="tWarn" hidden></div>
+      <form class="steps" id="closeForm">
+        <div class="step">
+          <div class="step-n">1</div>
+          <div class="step-body">
+            <h3>Count the cash drawer</h3>
+            <div class="step-fields">
+              <div class="field"><label for="tFloat">Opening float (cash in drawer this morning)</label><input type="number" id="tFloat" step="0.01" min="0"></div>
+              <div class="field"><label for="tCounted">Total cash in drawer now (including float)</label><input type="number" id="tCounted" step="0.01" min="0" placeholder="Count all notes and coins"></div>
+            </div>
+            <div class="result" id="cashResult"></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-n">2</div>
+          <div class="step-body">
+            <h3>Check the card machine</h3>
+            <div class="step-fields">
+              <div class="field"><label for="tCard">Card machine end-of-day total</label><input type="number" id="tCard" step="0.01" min="0" placeholder="From the machine's settlement slip"></div>
+            </div>
+            <p class="sub" id="cardHint"></p>
+            <div class="result" id="cardResult"></div>
+            <details class="cardlist"><summary>Card sales today</summary><div id="cardList"></div></details>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-n">3</div>
+          <div class="step-body">
+            <h3>Close the day</h3>
+            <div class="step-fields">
+              <div class="field"><label for="tTakeOut">Cash taken out of the drawer (to bank or owner)</label><input type="number" id="tTakeOut" step="0.01" min="0" value="0"></div>
+              <div class="field"><label for="tNote">Note</label><input id="tNote" placeholder="Optional"></div>
+            </div>
+            <p class="sub" id="nextFloat"></p>
+            <div class="actions" style="justify-content:flex-start"><button class="btn" type="submit" id="tSave">Save closing</button></div>
+          </div>
+        </div>
       </form>
-      <div class="tally" id="varianceBox"></div>
     </div>
     <div class="panel">
       <div class="panel-head"><h2>Saved closings</h2></div>
@@ -401,9 +476,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
         <div class="field"><label for="cPhone">Phone</label><input id="cPhone" type="tel" placeholder="+971 5x xxx xxxx"></div>
         <div class="field"><label for="cEmail">Email</label><input id="cEmail" type="email"></div>
         <div class="field"><label for="cBirthday">Birthday</label><input id="cBirthday" type="date"></div>
+        <div class="field"><label for="cTier">Customer type</label><select id="cTier"><option value="">Automatic</option><option>Regular</option><option>VIP</option></select></div>
         <div class="field"><label for="cNotes">Notes</label><input id="cNotes" placeholder="Allergies, preferences"></div>
         <button class="btn" type="submit">Add client</button>
       </form>
+      <div class="notice" id="cDup" hidden></div>
     </div>
     <div class="panel">
       <div class="panel-head"><h2>Clients</h2>
@@ -462,6 +539,21 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
   <!-- REPORTS -->
   <section id="tab-reports" class="tabpanel" hidden>
     <div class="panel">
+      <div class="panel-head"><div style="display:grid;gap:2px"><h2>Daily profit &amp; loss</h2><span class="sub" id="dSub"></span></div>
+        <div class="toolbar">
+          <button class="btn ghost small" id="dPrev" aria-label="Previous day">◀</button>
+          <div class="field"><label for="dDate">Day</label><input type="date" id="dDate"></div>
+          <button class="btn ghost small" id="dNext" aria-label="Next day">▶</button>
+          <button class="btn ghost small" id="dCsv">Export day CSV</button>
+        </div>
+      </div>
+      <div class="kpis" id="dKpis"></div>
+      <div class="grid2 even">
+        <div class="table-wrap" id="dPL"></div>
+        <div class="table-wrap" id="dSide"></div>
+      </div>
+    </div>
+    <div class="panel">
       <div class="panel-head"><h2>Monthly report</h2>
         <div class="toolbar">
           <div class="field"><label for="rMonth">Month</label><input type="month" id="rMonth"></div>
@@ -485,12 +577,27 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
     <div class="panel">
       <div class="panel-head"><div style="display:grid;gap:2px"><h2>Account &amp; devices</h2><span class="sub">Signed in as <strong id="whoami"></strong></span></div><button class="btn ghost small" id="signOut">Sign out</button></div>
       <div class="tally">
-        <div class="box"><h3>Set up another device</h3><p class="sub">Copy the setup code and send it to yourself on WhatsApp or email. On the new PC, phone or tablet, paste it on the Connect screen, then sign in.</p><div class="actions" style="justify-content:flex-start"><button class="btn small" id="copySetup">Copy setup code</button></div></div>
+        <div class="box"><h3>Subscription</h3><div id="subInfo" class="sub"></div></div>
+        <div class="box"><h3>This device</h3><div class="field"><label for="myDevName">Device name</label><input id="myDevName" placeholder="e.g. Front desk PC"></div><div class="actions" style="justify-content:flex-start"><button class="btn small ghost" id="myDevSave">Save name</button></div></div>
         <div class="box"><h3>Install on this device</h3><p class="sub" id="installHelp"></p></div>
         <div class="box"><h3>Backup</h3><p class="sub">Download everything as one file, or restore from a backup.</p><div class="actions" style="justify-content:flex-start"><button class="btn small ghost" id="backupBtn">Download backup</button><label class="btn small ghost" for="restoreFile">Restore backup</label><input type="file" id="restoreFile" accept="application/json,.json" hidden></div></div>
       </div>
     </div>
-    <div class="panel">
+    <div class="panel owner-only">
+      <div class="panel-head"><div style="display:grid;gap:2px"><h2>Devices</h2><span class="sub" id="devSummary"></span></div><button class="btn ghost small" id="devRefresh">Refresh</button></div>
+      <div class="table-wrap" id="devTable"></div>
+    </div>
+    <div class="panel owner-only">
+      <div class="panel-head"><div style="display:grid;gap:2px"><h2>Team logins</h2><span class="sub">Add an email, then that person opens the app, enters the Salon Code and chooses “First time? Activate your account”.</span></div></div>
+      <form class="entry" id="teamForm">
+        <div class="field"><label for="tmName">Name</label><input id="tmName" required></div>
+        <div class="field"><label for="tmEmail">Email</label><input id="tmEmail" type="email" required></div>
+        <div class="field"><label for="tmRole">Access</label><select id="tmRole"><option value="staff">Staff (no reports or settings)</option><option value="owner">Owner (full access)</option></select></div>
+        <button class="btn" type="submit">Add login</button>
+      </form>
+      <div class="table-wrap" id="teamTable"></div>
+    </div>
+    <div class="panel owner-only">
       <div class="panel-head"><div style="display:grid;gap:2px"><h2>Business details</h2><span class="sub">Printed on every receipt. Add your TRN to issue tax invoices.</span></div></div>
       <form class="entry" id="bizForm">
         <div class="field"><label for="zName">Business name</label><input id="zName" placeholder="Your salon name"></div>
@@ -503,7 +610,15 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
         <button class="btn" type="submit">Save details</button>
       </form>
     </div>
-    <div class="panel">
+    <div class="panel owner-only">
+      <div class="panel-head"><div style="display:grid;gap:2px"><h2>Booking alerts</h2><span class="sub">A pop-up with a sound before each booking, on every device where the app is open.</span></div></div>
+      <div class="entry" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end">
+        <div class="field"><label for="alMins">Alert before booking</label><select id="alMins"><option value="0">Off</option><option value="5">5 minutes</option><option value="10" selected>10 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option></select></div>
+        <label class="check"><input type="checkbox" id="alSound" checked> Play a sound</label>
+        <button class="btn ghost" type="button" id="alTest">Test alert</button>
+      </div>
+    </div>
+    <div class="panel owner-only">
       <div class="panel-head"><div style="display:grid;gap:2px"><h2>Service menu</h2><span class="sub">Used for bookings. Edit prices and times in the table.</span></div></div>
       <form class="entry" id="svcForm">
         <div class="field"><label for="vName">Service</label><input id="vName" required placeholder="e.g. Blow-dry"></div>
@@ -515,7 +630,67 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
       <div class="table-wrap" id="svcTable"></div>
     </div>
   </section>
+
+  <!-- AI ASSISTANT -->
+  <section id="tab-ai" class="tabpanel" hidden>
+    <div class="panel ai-panel">
+      <span class="pill">Coming soon</span>
+      <h2>AI Assistant</h2>
+      <p>Ask questions about your salon in plain words and get answers straight away, any time of day.</p>
+      <div class="ai-examples">
+        <div class="box"><strong>For owners</strong><p class="sub">“How much did we earn this week compared with last week?” · “Which services sell best on Fridays?” · “Which products should I reorder?”</p></div>
+        <div class="box"><strong>For staff</strong><p class="sub">“How do I record a split payment?” · “Book Fatima for a facial tomorrow at 4 pm.”</p></div>
+        <div class="box"><strong>For your customers</strong><p class="sub">Answers WhatsApp messages 24/7, shares prices and books appointments into your calendar.</p></div>
+      </div>
+      <div class="ai-chat" aria-disabled="true"><input disabled placeholder="Type your question… (available soon)"><button class="btn" disabled>Ask</button></div>
+      <p class="sub">Want early access? Contact Hostready.</p>
+    </div>
+  </section>
+
+  <!-- HOSTREADY ADMIN -->
+  <section id="tab-admin" class="tabpanel" hidden>
+    <div class="kpis" id="adKpis"></div>
+    <div class="panel">
+      <div class="panel-head"><div style="display:grid;gap:2px"><h2>Salons</h2><span class="sub">Only Hostready admins see this tab.</span></div>
+        <div class="toolbar"><div class="field"><label for="adFilter">Search</label><input id="adFilter" placeholder="Name or code"></div><button class="btn ghost small" id="adReload">Refresh</button><button class="btn small" id="adNewBtn">New salon</button></div>
+      </div>
+      <form class="entry" id="adNew" hidden>
+        <div class="field"><label for="anName">Salon name</label><input id="anName" required></div>
+        <div class="field"><label for="anCode">Salon Code (blank = automatic)</label><input id="anCode" autocapitalize="characters" placeholder="SAL-1234"></div>
+        <div class="field"><label for="anPlan">Plan</label><select id="anPlan"><option>Starter</option><option>Business</option><option>Premium</option></select></div>
+        <div class="field"><label for="anDev">Devices included</label><input type="number" id="anDev" min="1" value="2"></div>
+        <div class="field"><label for="anTrial">Free trial (days)</label><input type="number" id="anTrial" min="0" max="30" value="7"></div>
+        <div class="field"><label for="anOwner">Owner name</label><input id="anOwner"></div>
+        <div class="field"><label for="anEmail">Owner email</label><input id="anEmail" type="email" required></div>
+        <div class="field"><label for="anPhone">Owner phone</label><input id="anPhone" type="tel"></div>
+        <div class="actions"><button class="btn" type="submit">Create salon</button><button class="btn ghost" type="button" id="adNewCancel">Cancel</button></div>
+      </form>
+      <div id="adDetail"></div>
+      <div class="table-wrap" id="adTable"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div style="display:grid;gap:2px"><h2>Hostready details</h2><span class="sub">Shown to salons on renewal screens and on your subscription invoices.</span></div></div>
+      <form class="entry" id="adSettings">
+        <div class="field"><label for="asName">Company name</label><input id="asName"></div>
+        <div class="field"><label for="asPhone">Support phone / WhatsApp</label><input id="asPhone"></div>
+        <div class="field"><label for="asEmail">Support email</label><input id="asEmail" type="email"></div>
+        <div class="field"><label for="asTrn">Company TRN</label><input id="asTrn"></div>
+        <div class="field"><label for="asAddr">Company address</label><input id="asAddr"></div>
+        <div class="field"><label for="asBank">Bank details for renewals</label><input id="asBank" placeholder="Bank, account name, IBAN"></div>
+        <button class="btn" type="submit">Save</button>
+      </form>
+    </div>
+  </section>
 </main>
+<footer class="appfoot"><span>© 2026 Hostready LLC. All rights reserved.</span><span id="verText"></span></footer>
+</div>
+<div class="overlay" id="alertBox" hidden>
+  <div class="sheet alert-sheet" role="alertdialog" aria-modal="true" aria-labelledby="alTitle">
+    <div class="alert-time" id="alWhen"></div>
+    <h2 id="alTitle">Upcoming booking</h2>
+    <div id="alBody"></div>
+    <div class="actions"><button class="btn ghost" id="alOpen">Open calendar</button><button class="btn" id="alOk">OK</button></div>
+  </div>
 </div>
 
 <div class="overlay" id="overlay" hidden>
@@ -529,6 +704,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 <datalist id="clientList"></datalist>
 <div class="toast" id="toast" hidden></div>
 
+<script src="version.js"></script>
 <script src="lib/capacitor.js"></script>
 <script src="lib/jspdf.umd.min.js"></script>
 <script src="lib/supabase.js"></script>
@@ -568,7 +744,23 @@ const downloads = { save: async ({ filename, data }) => {
 const $ = id => document.getElementById(id);
 const pad = n => String(n).padStart(2, "0");
 const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-const today = () => ymd(new Date());
+const TZ = () => (S.settings && S.settings.tz) || "Asia/Dubai";
+function partsIn(ts) {
+  const f = new Intl.DateTimeFormat("en-CA", { timeZone: TZ(), year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const p = Object.fromEntries(f.formatToParts(ts).map(x => [x.type, x.value]));
+  return { date: `${p.year}-${p.month}-${p.day}`, min: (+p.hour % 24) * 60 + (+p.minute) };
+}
+const nowParts = () => partsIn(new Date());
+const today = () => nowParts().date;
+const dateOfTs = ts => partsIn(new Date(ts)).date;
+// the real moment of a salon-local date + minutes (used to schedule phone notifications)
+function zonedToDate(dateStr, minutes) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const guess = Date.UTC(y, m - 1, d, 0, minutes);
+  const p = partsIn(new Date(guess)); const [py, pm, pd] = p.date.split("-").map(Number);
+  const wall = Date.UTC(py, pm - 1, pd, 0, p.min);
+  return new Date(guess - (wall - guess));
+}
 const monthOf = s => s.slice(0, 7);
 const addDays = (s, n) => { const [y,m,d] = s.split("-").map(Number); return ymd(new Date(y, m-1, d + n)); };
 const fmt = n => (Math.round((n || 0) * 100) / 100).toLocaleString("en-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -584,7 +776,7 @@ const fromMin = m => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
 const time12 = t => { const m = toMin(t), h = Math.floor(m / 60); return `${(h % 12) || 12}:${pad(m % 60)} ${h < 12 ? "am" : "pm"}`; };
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const strip = o => { const { id, ...rest } = o; return rest; };
-const hours = () => ({ open: (+S.settings.openHour || 10) * 60, close: (+S.settings.closeHour || 22) * 60 });
+const hours = () => { const o = S.settings.openHour, c = S.settings.closeHour; const open = (o === "" || o == null ? 10 : +o) * 60, close = (c === "" || c == null ? 22 : +c) * 60; return { open, close: Math.max(open + 60, close) }; };
 
 function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2600); }
 function arm(b, label = "Confirm") { if (b.dataset.armed) return true; const old = b.textContent; b.dataset.armed = "1"; b.textContent = label; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = old; } }, 3000); return false; }
@@ -593,12 +785,12 @@ function arm(b, label = "Confirm") { if (b.dataset.armed) return true; const old
 async function save(col, id, data) {
   if (!db) { const i = S[col].findIndex(x => x.id === id); const row = { ...data, id }; i >= 0 ? S[col][i] = row : S[col].push(row); renderAll(); return; }
   try { await db.collection(col).doc(id).set(data); }
-  catch (e) { toast(e.code === "quota_exceeded" ? "Storage is full. Delete old entries and try again." : e.code === "invalid_argument" ? "You don't have permission to change this ledger." : "Could not save. Check your connection and try again."); throw e; }
+  catch (e) { toast(e.code === "readonly" ? e.message : "Could not save. Check your connection and try again."); throw e; }
 }
 const patch = (col, id, p) => { const cur = S[col].find(x => x.id === id); return save(col, id, { ...(cur ? strip(cur) : {}), ...p }); };
 async function remove(col, id) {
   if (!db) { S[col] = S[col].filter(x => x.id !== id); renderAll(); return; }
-  try { await db.collection(col).doc(id).delete(); } catch { toast("Could not delete. Try again."); }
+  try { await db.collection(col).doc(id).delete(); } catch (e) { toast(e.code === "readonly" ? e.message : "Could not delete. Try again."); }
 }
 const SORTS = {
   transactions: (a, b) => b.date.localeCompare(a.date) || (b.created || 0) - (a.created || 0),
@@ -630,17 +822,35 @@ function clientStats() {
   }
   return m;
 }
-const tier = (st) => !st ? ["New", ""] : st.spent >= 3000 || st.visits.size >= 10 ? ["VIP", "vip"] : st.visits.size >= 3 ? ["Regular", "ok"] : ["New", ""];
+const autoTier = (st) => !st ? ["New", ""] : st.spent >= 3000 || st.visits.size >= 10 ? ["VIP", "vip"] : st.visits.size >= 3 ? ["Regular", "ok"] : ["New", ""];
+const tierOf = (c, st) => c?.tier === "VIP" ? ["VIP", "vip"] : c?.tier === "Regular" ? ["Regular", "ok"] : autoTier(st);
+const tier = (st, c) => tierOf(c, st);
+const isVip = id => { const c = S.clients.find(x => x.id === id); return !!c && tierOf(c, clientStatsCached()[id])[0] === "VIP"; };
+let _csCache = null, _csKey = "";
+function clientStatsCached() { const k = S.transactions.length + ":" + (S.transactions[0]?.id || ""); if (k !== _csKey) { _csKey = k; _csCache = clientStats(); } return _csCache; }
+const phoneKey = p => { const d = String(p || "").replace(/\D/g, ""); return d.length >= 9 ? d.slice(-9) : d; };
+const findByPhone = (phone, exceptId) => { const k = phoneKey(phone); return k.length >= 7 ? S.clients.find(c => c.id !== exceptId && phoneKey(c.phone) === k) : null; };
 async function ensureClient(name, phone) {
   name = (name || "").trim(); phone = (phone || "").trim();
   if (!name) return null;
-  const c = S.clients.find(c => c.name.toLowerCase() === name.toLowerCase() && (!phone || !c.phone || c.phone === phone));
+  const byPhone = phone ? findByPhone(phone) : null;
+  if (byPhone) return byPhone;
+  const c = S.clients.find(c => c.name.toLowerCase() === name.toLowerCase() && (!phone || !c.phone || phoneKey(c.phone) === phoneKey(phone)));
   if (c) { if (phone && !c.phone) await patch("clients", c.id, { phone }); return c; }
   const id = newId(), data = { name, phone, email: "", birthday: "", notes: "", created: Date.now() };
   await save("clients", id, data);
   return { id, ...data };
 }
-const invoiceNo = () => { const d = new Date(); return `INV-${String(d.getFullYear()).slice(2)}${pad(d.getMonth()+1)}${pad(d.getDate())}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`; };
+const PAY_IN = [["Cash", "Cash"], ["Card", "Card"], ["Bank transfer", "Bank transfer"], ["Split", "Split (cash + card)"]];
+const PAY_OUT = [["Cash", "Cash from drawer"], ["Card", "Card"], ["Bank transfer", "Bank transfer"], ["Owner paid", "Owner paid (not from drawer)"]];
+function payParts(t) {
+  const a = +t.amount || 0, z = { cash: 0, card: 0, bank: 0, other: 0 };
+  if (t.pay === "Cash") z.cash = a; else if (t.pay === "Card") z.card = a; else if (t.pay === "Bank transfer") z.bank = a;
+  else if (t.pay === "Split") { z.cash = +t.cashPart || 0; z.card = +t.cardPart || 0; } else z.other = a;
+  return z;
+}
+const payLabel = t => t.pay === "Split" ? `Cash ${fmt(t.cashPart)} + Card ${fmt(t.cardPart)}` : t.type === "expense" && t.pay === "Cash" ? "Cash from drawer" : (t.pay || "");
+const invoiceNo = () => `INV-${today().slice(2).replace(/-/g, "")}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
 /* ---------- tabs ---------- */
 function showTab(t) {
@@ -664,7 +874,7 @@ const groupBy = (list, f) => list.reduce((m, x) => { const k = f(x); m[k] = (m[k
 /* ---------- dashboard ---------- */
 function renderDashboard() {
   const t = today(), m = monthOf(t);
-  const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); const pm = ymd(d).slice(0, 7);
+  const [cy, cm] = m.split("-").map(Number); const pm = cm === 1 ? `${cy - 1}-12` : `${cy}-${pad(cm - 1)}`;
   const todayS = sums(S.transactions.filter(x => x.date === t));
   const monthS = sums(S.transactions.filter(x => monthOf(x.date) === m));
   const prevS = sums(S.transactions.filter(x => monthOf(x.date) === pm));
@@ -738,6 +948,7 @@ function openBooking(pre = {}) {
 $("aNew").addEventListener("click", () => openBooking());
 $("bCancel").addEventListener("click", () => { $("bookForm").hidden = true; S.editAppt = null; });
 $("bService").addEventListener("change", () => { const s = S.services.find(x => x.id === $("bService").value); if (s) { $("bDur").value = s.duration; $("bPrice").value = s.price; } });
+$("bPhone").addEventListener("change", () => { const c = findByPhone($("bPhone").value); if (c) { $("bClient").value = c.name; toast(`Existing customer: ${c.name}`); } });
 $("bClient").addEventListener("change", () => { const c = S.clients.find(c => c.name.toLowerCase() === $("bClient").value.trim().toLowerCase()); if (c && !$("bPhone").value) $("bPhone").value = c.phone || ""; });
 ["bDate","bTime","bStaff","bDur"].forEach(id => $(id).addEventListener("change", () => { S.clashOk = false; $("bWarn").hidden = true; }));
 $("bookForm").addEventListener("submit", async e => {
@@ -775,13 +986,13 @@ function renderAppts() {
     let h = `<div class="sched" style="grid-template-columns:58px repeat(${cols.length}, minmax(150px, 1fr));--hour:${SLOT * 2}px;--half:${SLOT}px"><div class="sh"></div>`;
     h += cols.map(n => { const st = S.staff.find(s => s.name === n); const c = active.filter(a => a.staff === n).length; return `<div class="sh">${esc(n)}<small>${esc(st?.role || "")}${c ? ` · ${c} booked` : ""}</small></div>`; }).join("");
     h += `<div class="times" style="height:${H}px">`; for (let m = open; m < close; m += 60) h += `<span style="top:${(m - open) / 30 * SLOT}px">${time12(fromMin(m)).replace(":00", "")}</span>`; h += `</div>`;
-    const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
+    const nowMin = nowParts().min;
     for (const n of cols) {
       h += `<div class="col" data-staff="${esc(n)}" style="height:${H}px">`;
       if (d === today() && nowMin > open && nowMin < close) h += `<div class="now-line" style="top:${(nowMin - open) / 30 * SLOT}px"></div>`;
       for (const a of active.filter(a => a.staff === n)) {
         const top = (toMin(a.time) - open) / 30 * SLOT, ht = Math.max(SLOT - 3, a.duration / 30 * SLOT - 3);
-        h += `<button type="button" class="appt ${a.status} ${S.selAppt === a.id ? "sel" : ""}" data-appt="${a.id}" style="top:${top + 1}px;height:${ht}px"><b>${time12(a.time)} · ${esc(a.clientName)}</b><span>${esc(a.serviceName)}</span>${ht > 50 ? `<span>AED ${fmt0(a.price)}${a.status !== "Booked" ? " · " + a.status : ""}</span>` : ""}</button>`;
+        h += `<button type="button" class="appt ${a.status} ${S.selAppt === a.id ? "sel" : ""}" data-appt="${a.id}" style="top:${top + 1}px;height:${ht}px"><b>${time12(a.time)} · ${esc(a.clientName)}${isVip(a.clientId) ? '<span class="badge-vip">VIP</span>' : ""}</b><span>${esc(a.serviceName)}</span>${ht > 50 ? `<span>AED ${fmt0(a.price)}${a.status !== "Booked" ? " · " + a.status : ""}</span>` : ""}</button>`;
       }
       h += `</div>`;
     }
@@ -796,9 +1007,9 @@ function renderApptDetail() {
   const c = S.clients.find(x => x.id === a.clientId);
   const st = clientStats()[a.clientId];
   $("apptDetail").innerHTML = `<div class="detail">
-    <dl class="kv"><dt>Client</dt><dd>${esc(a.clientName)} ${c ? `<span class="pill ${tier(st)[1]}">${tier(st)[0]}</span>` : ""}</dd><dt>Phone</dt><dd>${esc(a.phone || c?.phone || "—")}</dd><dt>Service</dt><dd>${esc(a.serviceName)}</dd><dt>When</dt><dd>${prettyDate(a.date)}, ${time12(a.time)} · ${a.duration} min</dd><dt>Staff</dt><dd>${esc(a.staff)}</dd><dt>Price</dt><dd class="num">AED ${fmt(a.price)}</dd>${a.note ? `<dt>Note</dt><dd>${esc(a.note)}</dd>` : ""}${c?.notes ? `<dt>Client notes</dt><dd>${esc(c.notes)}</dd>` : ""}<dt>Status</dt><dd><span class="pill ${a.status}">${a.status}</span></dd></dl>
+    <dl class="kv"><dt>Client</dt><dd>${esc(a.clientName)} ${c ? `<span class="pill ${tier(st, c)[1]}">${tier(st, c)[0]}</span>` : ""}</dd><dt>Phone</dt><dd>${esc(a.phone || c?.phone || "—")}</dd><dt>Service</dt><dd>${esc(a.serviceName)}</dd><dt>When</dt><dd>${prettyDate(a.date)}, ${time12(a.time)} · ${a.duration} min</dd><dt>Staff</dt><dd>${esc(a.staff)}</dd><dt>Price</dt><dd class="num">AED ${fmt(a.price)}</dd>${a.note ? `<dt>Note</dt><dd>${esc(a.note)}</dd>` : ""}${c?.notes ? `<dt>Client notes</dt><dd>${esc(c.notes)}</dd>` : ""}<dt>Status</dt><dd><span class="pill ${a.status}">${a.status}</span></dd></dl>
     <div style="display:grid;gap:10px;align-content:start">
-      ${a.status === "Booked" ? `<div class="inline-edit" style="background:var(--surface)"><div class="field"><label for="coAmt">Charge (AED)</label><input type="number" id="coAmt" step="0.01" min="0" value="${a.price}"></div><div class="field"><label for="coPay">Paid by</label><select id="coPay"><option>Card</option><option>Cash</option><option>Bank transfer</option></select></div><button class="btn" data-act="checkout">Check out</button></div>` : ""}
+      ${a.status === "Booked" ? `<div class="inline-edit" style="background:var(--surface)"><div class="field"><label for="coAmt">Charge (AED)</label><input type="number" id="coAmt" step="0.01" min="0" value="${a.price}"></div><div class="field"><label for="coPay">Paid by</label><select id="coPay"><option value="" disabled selected>Choose…</option><option>Card</option><option>Cash</option><option>Bank transfer</option><option value="Split">Split (cash + card)</option></select></div><div class="field" id="coCashF" hidden><label for="coCash">Cash part</label><input type="number" id="coCash" step="0.01" min="0"></div><button class="btn" data-act="checkout">Check out</button></div>` : ""}
       <div class="actions" style="justify-content:flex-start">
         ${a.status === "Completed" && a.txId ? `<button class="btn ghost small" data-act="receipt">Receipt</button>` : ""}
         ${a.status === "Booked" ? `<button class="btn ghost small" data-act="edit">Edit</button><button class="btn ghost small" data-act="noshow">No-show</button><button class="btn danger small" data-act="cancel">Cancel booking</button>` : ""}
@@ -809,6 +1020,7 @@ function renderApptDetail() {
       </div>
     </div></div>`;
 }
+$("tab-appts").addEventListener("change", e => { if (e.target.id === "coPay") $("coCashF").hidden = e.target.value !== "Split"; });
 $("tab-appts").addEventListener("click", async e => {
   const blk = e.target.closest("[data-appt]");
   if (blk) { S.selAppt = blk.dataset.appt; renderAppts(); $("apptDetail").scrollIntoView({ block: "nearest", behavior: "smooth" }); return; }
@@ -836,7 +1048,9 @@ $("tab-appts").addEventListener("click", async e => {
     if (!(amount > 0)) { toast("Enter the amount charged."); return; }
     b.disabled = true;
     const txId = newId();
-    const tx = { type: "income", date: a.date, category: SERVICE_CATS.includes(a.category) ? a.category : "Other income", desc: a.serviceName, amount, vat: vatOf(amount, true), pay: $("coPay").value, staff: a.staff, clientId: a.clientId || "", clientName: a.clientName, apptId: a.id, invoiceNo: invoiceNo(), created: Date.now() };
+    if (!$("coPay").value) { toast("Choose how the client paid."); b.disabled = false; return; }
+    const tx = { type: "income", date: a.date, category: SERVICE_CATS.includes(a.category) ? a.category : "Other income", desc: a.serviceName, amount, vat: vatOf(amount, true), pay: $("coPay").value, staff: a.staff, clientId: a.clientId || "", clientName: a.clientName, apptId: a.id, invoiceNo: invoiceNo(), created: Date.now(), by: LedgerSync.user()?.email || "" };
+    if (tx.pay === "Split") { tx.cashPart = Math.min(amount, r2(+$("coCash").value || 0)); tx.cardPart = r2(amount - tx.cashPart); }
     await save("transactions", txId, tx);
     await patch("appointments", a.id, { status: "Completed", txId, price: amount });
     toast(`Checked out · AED ${fmt(amount)} recorded`);
@@ -848,7 +1062,7 @@ $("tab-appts").addEventListener("click", async e => {
 function txTable(list, withActions) {
   if (!list.length) return `<p class="empty">No entries yet. Add your first sale or expense in the Income &amp; Expenses tab.</p>`;
   return `<table><thead><tr><th>Date</th><th>Details</th><th>Paid by</th>${withActions ? "<th>Staff</th><th class='r'>VAT</th>" : ""}<th class="r">AED</th>${withActions ? "<th></th>" : ""}</tr></thead><tbody>${
-    list.map(t => `<tr><td class="num" style="white-space:nowrap">${prettyDate(t.date)}</td><td><span class="pill ${t.type === "income" ? "in" : "out"}">${esc(t.category)}</span> ${esc(t.desc)}${t.itemQty ? ` <span class="sub">×${t.itemQty}</span>` : ""}${t.clientName ? `<div class="sub">${esc(t.clientName)}</div>` : ""}</td><td>${esc(t.pay)}</td>${withActions ? `<td>${esc(t.staff || "")}</td><td class="r num">${fmt(t.vat)}</td>` : ""}<td class="r num ${t.type === "income" ? "pos" : "neg"}">${t.type === "income" ? "" : "−"}${fmt(t.amount)}</td>${withActions ? `<td><div class="actions">${t.type === "income" ? `<button class="btn small ghost" data-rcpt="${t.id}">Receipt</button>` : ""}<button class="btn small danger" data-deltx="${t.id}">Delete</button></div></td>` : ""}</tr>`).join("")
+    list.map(t => `<tr><td class="num" style="white-space:nowrap">${prettyDate(t.date)}</td><td><span class="pill ${t.type === "income" ? "in" : "out"}">${esc(t.category)}</span> ${esc(t.desc)}${t.itemQty ? ` <span class="sub">×${t.itemQty}</span>` : ""}${t.clientName ? `<div class="sub">${esc(t.clientName)}</div>` : ""}</td><td>${esc(payLabel(t))}</td>${withActions ? `<td>${esc(t.staff || "")}</td><td class="r num">${fmt(t.vat)}</td>` : ""}<td class="r num ${t.type === "income" ? "pos" : "neg"}">${t.type === "income" ? "" : "−"}${fmt(t.amount)}</td>${withActions ? `<td><div class="actions">${t.type === "income" ? `<button class="btn small ghost" data-rcpt="${t.id}">Receipt</button>` : ""}<button class="btn small danger" data-deltx="${t.id}">Delete</button></div></td>` : ""}</tr>`).join("")
   }</tbody></table>`;
 }
 function fillCats() {
@@ -857,6 +1071,13 @@ function fillCats() {
   $("txCat").innerHTML = cats.map(c => `<option>${c}</option>`).join("");
   if (cats.includes(cur)) $("txCat").value = cur;
   $("clientField").hidden = S.type !== "income";
+  const opts = S.type === "income" ? PAY_IN : PAY_OUT, curPay = $("txPay").value;
+  if ($("txPay").dataset.kind !== S.type) {
+    $("txPay").innerHTML = `<option value="" disabled selected>Choose…</option>` + opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+    $("txPay").dataset.kind = S.type;
+    if (opts.some(o => o[0] === curPay)) $("txPay").value = curPay;
+  }
+  toggleSplit();
   toggleItem();
 }
 function toggleItem() {
@@ -868,6 +1089,13 @@ function toggleItem() {
     $("txItem").value = cur;
   }
 }
+function toggleSplit() {
+  const on = $("txPay").value === "Split";
+  $("splitCashF").hidden = $("splitCardF").hidden = !on;
+}
+$("txPay").addEventListener("change", toggleSplit);
+$("txCashPart").addEventListener("input", () => { const a = +$("txAmount").value || 0, c = +$("txCashPart").value || 0; $("txCardPart").value = Math.max(0, r2(a - c)).toFixed(2); });
+$("txCardPart").addEventListener("input", () => { const a = +$("txAmount").value || 0, c = +$("txCardPart").value || 0; $("txCashPart").value = Math.max(0, r2(a - c)).toFixed(2); });
 $("typeSeg").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; S.type = b.dataset.v; [...$("typeSeg").children].forEach(x => x.classList.toggle("on", x === b)); fillCats(); });
 $("txCat").addEventListener("change", toggleItem);
 const priceFromItem = () => { const it = S.inventory.find(i => i.id === $("txItem").value); if (it) { $("txAmount").value = (it.price * (+$("txQty").value || 1)).toFixed(2); if (!$("txDesc").value) $("txDesc").value = it.name; } };
@@ -877,7 +1105,12 @@ $("txForm").addEventListener("submit", async e => {
   e.preventDefault();
   const amount = +$("txAmount").value;
   if (!(amount > 0)) { toast("Enter an amount above zero."); return; }
-  const row = { type: S.type, date: $("txDate").value, category: $("txCat").value, desc: $("txDesc").value.trim(), amount, vat: vatOf(amount, $("txVat").checked), pay: $("txPay").value, staff: $("txStaff").value, created: Date.now() };
+  if (!$("txPay").value) { toast("Choose how it was paid."); $("txPay").focus(); return; }
+  const row = { type: S.type, date: $("txDate").value, category: $("txCat").value, desc: $("txDesc").value.trim(), amount, vat: vatOf(amount, $("txVat").checked), pay: $("txPay").value, staff: $("txStaff").value, created: Date.now(), by: LedgerSync.user()?.email || "" };
+  if (row.pay === "Split") {
+    row.cashPart = r2(+$("txCashPart").value || 0); row.cardPart = r2(+$("txCardPart").value || 0);
+    if (Math.abs(row.cashPart + row.cardPart - amount) > 0.009) { toast(`Cash + card must add up to AED ${fmt(amount)}.`); return; }
+  }
   if (S.type === "income") {
     row.invoiceNo = invoiceNo();
     const c = await ensureClient($("txClient").value, "");
@@ -888,7 +1121,8 @@ $("txForm").addEventListener("submit", async e => {
   await save("transactions", newId(), row);
   if (item) await patch("inventory", item.id, { qty: item.qty - row.itemQty });
   toast(item ? `Saved. ${item.name} stock reduced by ${row.itemQty}.` : "Entry saved");
-  $("txDesc").value = ""; $("txAmount").value = ""; $("txQty").value = 1; $("txItem").value = ""; $("txClient").value = "";
+  $("txDesc").value = ""; $("txAmount").value = ""; $("txQty").value = 1; $("txItem").value = ""; $("txClient").value = ""; $("txCashPart").value = ""; $("txCardPart").value = "";
+  $("txPay").value = ""; toggleSplit();
 });
 $("txTable").addEventListener("click", async e => {
   const r = e.target.closest("[data-rcpt]"); if (r) { openReceipt(r.dataset.rcpt); return; }
@@ -905,47 +1139,93 @@ function renderMoney() {
 $("fMonth").addEventListener("change", renderMoney); $("fType").addEventListener("change", renderMoney);
 
 /* ---------- daily tally ---------- */
+function dayFigures(d) {
+  const list = S.transactions.filter(t => t.date === d);
+  const inc = { cash: 0, card: 0, bank: 0, other: 0 }, out = { cash: 0, card: 0, bank: 0, other: 0 };
+  for (const t of list) { const p = payParts(t), tgt = t.type === "income" ? inc : out; for (const k in p) tgt[k] += p[k]; }
+  return { list, inc, out };
+}
+function prevClosing(d) { return S.closings.filter(c => c.date < d).sort((a, b) => b.date.localeCompare(a.date))[0]; }
+function defaultFloat(d) { const p = prevClosing(d); return p ? r2((+p.counted || 0) - (+p.takeOut || 0)) : 0; }
+const dtFmt = ts => new Date(ts).toLocaleString("en-GB", { timeZone: TZ(), day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+let tallyLoadedFor = null;
+function loadTallyForm(d) {
+  const c = S.closings.find(x => x.date === d);
+  $("tFloat").value = c ? c.float : defaultFloat(d);
+  $("tCounted").value = c ? c.counted : "";
+  $("tCard").value = c && c.cardEntered !== false && c.cardSettled != null ? c.cardSettled : "";
+  $("tTakeOut").value = c ? (c.takeOut || 0) : 0;
+  $("tNote").value = c ? (c.note || "") : "";
+  tallyLoadedFor = d;
+}
 function renderTally() {
   const d = $("tDate").value || today();
-  const list = S.transactions.filter(t => t.date === d);
-  const by = (type, pay) => list.filter(t => t.type === type && t.pay === pay).reduce((a, t) => a + t.amount, 0);
-  const cashIn = by("income", "Cash"), cardIn = by("income", "Card"), bankIn = by("income", "Bank transfer");
-  const cashOut = by("expense", "Cash"), otherOut = list.filter(t => t.type === "expense" && t.pay !== "Cash").reduce((a, t) => a + t.amount, 0);
-  const float = +$("tFloat").value || 0, expected = float + cashIn - cashOut;
+  if (tallyLoadedFor !== d) loadTallyForm(d);
+  const saved = S.closings.find(x => x.date === d);
+  $("tClosedBy").textContent = saved ? `Closed${saved.closedBy ? " by " + saved.closedBy : ""}${saved.saved ? " on " + dtFmt(saved.saved) : ""}` : (d === today() ? "Today is not closed yet" : "This day was not closed");
+  const { list, inc, out } = dayFigures(d);
+  const float = +$("tFloat").value || 0, expected = r2(float + inc.cash - out.cash);
+  const row = (l, v, cls = "") => `<div class="row"><span>${l}</span><span class="num ${cls}">${fmt(v)}</span></div>`;
   $("tallyBoxes").innerHTML = `
-    <div class="box"><h3>Takings</h3><div class="row"><span>Cash</span><span class="num">${fmt(cashIn)}</span></div><div class="row"><span>Card</span><span class="num">${fmt(cardIn)}</span></div><div class="row"><span>Bank transfer</span><span class="num">${fmt(bankIn)}</span></div><div class="row big"><span>Total income</span><span class="num pos">${fmt(cashIn + cardIn + bankIn)}</span></div></div>
-    <div class="box"><h3>Paid out</h3><div class="row"><span>From cash drawer</span><span class="num">${fmt(cashOut)}</span></div><div class="row"><span>Card / bank</span><span class="num">${fmt(otherOut)}</span></div><div class="row big"><span>Total expenses</span><span class="num neg">${fmt(cashOut + otherOut)}</span></div></div>
-    <div class="box"><h3>Cash drawer</h3><div class="row"><span>Opening float</span><span class="num">${fmt(float)}</span></div><div class="row"><span>+ Cash income</span><span class="num">${fmt(cashIn)}</span></div><div class="row"><span>− Cash expenses</span><span class="num">${fmt(cashOut)}</span></div><div class="row big"><span>Expected in drawer</span><span class="num">${fmt(expected)}</span></div></div>`;
+    <div class="box"><h3>Takings</h3>${row("Cash", inc.cash)}${row("Card", inc.card)}${row("Bank transfer", inc.bank)}${inc.other ? row("Other", inc.other) : ""}<div class="row big"><span>Total income</span><span class="num pos">${fmt(inc.cash + inc.card + inc.bank + inc.other)}</span></div></div>
+    <div class="box"><h3>Paid out</h3>${row("Cash from drawer", out.cash)}${row("Card", out.card)}${row("Bank transfer", out.bank)}${row("Owner paid", out.other)}<div class="row big"><span>Total expenses</span><span class="num neg">${fmt(out.cash + out.card + out.bank + out.other)}</span></div></div>
+    <div class="box"><h3>Cash drawer</h3>${row("Opening float", float)}${row("+ Cash income", inc.cash)}${row("− Cash from drawer", out.cash)}<div class="row big"><span>Should be in drawer</span><span class="num">${fmt(expected)}</span></div></div>`;
+  $("tWarn").hidden = expected >= 0;
+  $("tWarn").textContent = `The drawer should have AED ${fmt(expected)}, which is below zero. Check whether an expense marked “Cash from drawer” was really paid from the drawer. If the owner paid it, change it to “Owner paid”.`;
+
   const counted = $("tCounted").value === "" ? null : +$("tCounted").value;
+  if (counted === null) $("cashResult").className = "result", $("cashResult").innerHTML = "";
+  else {
+    const diff = r2(counted - expected);
+    $("cashResult").className = "result " + (Math.abs(diff) < 0.01 ? "ok" : "bad");
+    $("cashResult").innerHTML = Math.abs(diff) < 0.01 ? "Cash balanced ✓"
+      : diff > 0 ? `Over by AED ${fmt(diff)}<small>The drawer has more cash than recorded. Is a cash sale missing, or was it entered as card or bank transfer?</small>`
+      : `Short by AED ${fmt(-diff)}<small>The drawer has less cash than expected. Is a cash expense missing, was a card sale entered as cash, or was wrong change given?</small>`;
+  }
+  const cardSales = list.filter(t => t.type === "income" && (t.pay === "Card" || (t.pay === "Split" && +t.cardPart > 0)));
+  $("cardHint").textContent = `The app has AED ${fmt(inc.card)} in card sales (${cardSales.length} payment${cardSales.length === 1 ? "" : "s"}). Bank transfers (AED ${fmt(inc.bank)}) don't go through the machine, so check those in your bank app.`;
   const card = $("tCard").value === "" ? null : +$("tCard").value;
-  const vr = (label, diff) => diff === null ? "" : `<div class="row"><span>${label}</span><span class="num variance ${Math.abs(diff) < 0.01 ? "pos" : "neg"}">${Math.abs(diff) < 0.01 ? "Balanced" : (diff > 0 ? "Over " : "Short ") + fmt(Math.abs(diff))}</span></div>`;
-  $("varianceBox").innerHTML = (counted !== null || card !== null) ? `<div class="box"><h3>Variance</h3>${vr("Cash", counted === null ? null : counted - expected)}${vr("Card", card === null ? null : card - cardIn)}</div>` : "";
-  S._tally = { date: d, float, cashIn, cardIn, bankIn, cashOut, otherOut, expected };
-  $("closingsTable").innerHTML = S.closings.length ? `<table><thead><tr><th>Date</th><th class="r">Income</th><th class="r">Expected cash</th><th class="r">Counted</th><th class="r">Cash variance</th><th class="r">Card variance</th><th>Note</th></tr></thead><tbody>${
-    S.closings.map(c => { const cell = v => `<td class="r num ${Math.abs(v) < 0.01 ? "pos" : "neg"}">${Math.abs(v) < 0.01 ? "0.00" : (v > 0 ? "+" : "−") + fmt(Math.abs(v))}</td>`;
-      return `<tr><td>${prettyDate(c.date)}</td><td class="r num">${fmt(c.cashIn + c.cardIn + c.bankIn)}</td><td class="r num">${fmt(c.expected)}</td><td class="r num">${fmt(c.counted)}</td>${cell(c.counted - c.expected)}${cell(c.cardSettled - c.cardIn)}<td>${esc(c.note)}</td></tr>`; }).join("")}</tbody></table>` : `<p class="empty">No days closed yet. Count the drawer at the end of the day and save the closing above.</p>`;
+  if (card === null) $("cardResult").className = "result", $("cardResult").innerHTML = "";
+  else {
+    const diff = r2(card - inc.card);
+    $("cardResult").className = "result " + (Math.abs(diff) < 0.01 ? "ok" : "bad");
+    $("cardResult").innerHTML = Math.abs(diff) < 0.01 ? "Card machine matches ✓"
+      : diff > 0 ? `Machine is over by AED ${fmt(diff)}<small>The machine took more than the app recorded. Is a card sale missing, or was it entered as cash?</small>`
+      : `Machine is short by AED ${fmt(-diff)}<small>The app has more card sales than the machine. Was a sale marked as card but paid in cash, or did a card payment fail?</small>`;
+  }
+  $("cardList").innerHTML = cardSales.length ? `<table><tbody>${cardSales.map(t => `<tr><td>${t.created ? dtFmt(t.created).split(", ").pop() : ""}</td><td>${esc(t.desc || t.category)}<div class="sub">${esc(t.clientName || "")}</div></td><td class="r num">${fmt(t.pay === "Split" ? t.cardPart : t.amount)}</td></tr>`).join("")}</tbody></table>` : `<p class="sub">No card sales on this day.</p>`;
+  const takeOut = +$("tTakeOut").value || 0;
+  $("nextFloat").textContent = counted === null ? "" : `Next day's opening float will be AED ${fmt(counted - takeOut)}.`;
+  S._tally = { date: d, float, cashIn: inc.cash, cardIn: inc.card, bankIn: inc.bank, otherIn: inc.other, cashOut: out.cash, otherOut: out.card + out.bank + out.other, expected };
+
+  const cell = v => `<td class="r num ${Math.abs(v) < 0.01 ? "pos" : "neg"}">${Math.abs(v) < 0.01 ? "0.00" : (v > 0 ? "+" : "−") + fmt(Math.abs(v))}</td>`;
+  $("closingsTable").innerHTML = S.closings.length ? `<table><thead><tr><th>Date</th><th class="r">Income</th><th class="r">Expected cash</th><th class="r">Counted</th><th class="r">Cash variance</th><th class="r">Card variance</th><th class="r">Taken out</th><th>Closed by</th><th>Note</th></tr></thead><tbody>${
+    S.closings.map(c => `<tr class="clickable" data-closing="${c.date}"><td>${prettyDate(c.date)}</td><td class="r num">${fmt((c.cashIn || 0) + (c.cardIn || 0) + (c.bankIn || 0) + (c.otherIn || 0))}</td><td class="r num">${fmt(c.expected)}</td><td class="r num">${fmt(c.counted)}</td>${cell(c.counted - c.expected)}${cell((c.cardSettled ?? c.cardIn) - c.cardIn)}<td class="r num">${fmt(c.takeOut || 0)}</td><td>${esc(c.closedBy || "")}</td><td>${esc(c.note)}</td></tr>`).join("")}</tbody></table>` : `<p class="empty">No days closed yet. Count the drawer at the end of the day and save the closing above.</p>`;
 }
-["tDate", "tFloat", "tCounted", "tCard"].forEach(id => $(id).addEventListener("input", renderTally));
+$("tDate").addEventListener("change", () => { tallyLoadedFor = null; renderTally(); });
+["tFloat", "tCounted", "tCard", "tTakeOut"].forEach(id => $(id).addEventListener("input", renderTally));
+$("closingsTable").addEventListener("click", e => { const r = e.target.closest("[data-closing]"); if (r) { $("tDate").value = r.dataset.closing; tallyLoadedFor = null; renderTally(); $("tab-tally").scrollIntoView({ behavior: "smooth" }); } });
 $("closeForm").addEventListener("submit", async e => {
   e.preventDefault();
-  if ($("tCounted").value === "") { toast("Enter the cash you counted in the drawer."); return; }
-  const t = S._tally;
-  await save("closings", t.date, { ...t, counted: +$("tCounted").value, cardSettled: $("tCard").value === "" ? t.cardIn : +$("tCard").value, note: $("tNote").value.trim(), saved: Date.now() });
+  if ($("tCounted").value === "") { toast("Step 1: enter the total cash in the drawer."); $("tCounted").focus(); return; }
+  const t = S._tally, cardEntered = $("tCard").value !== "";
+  await save("closings", t.date, { ...t, counted: +$("tCounted").value, cardSettled: cardEntered ? +$("tCard").value : t.cardIn, cardEntered,
+    takeOut: +$("tTakeOut").value || 0, note: $("tNote").value.trim(), saved: Date.now(), closedBy: LedgerSync.user()?.email || "" });
   toast(`Closing saved for ${prettyDate(t.date)}`);
 });
 
 /* ---------- clients ---------- */
 function renderClients() {
   const stats = clientStats(), m = monthOf(today());
-  const newThisMonth = S.clients.filter(c => c.created && monthOf(ymd(new Date(c.created))) === m).length;
-  const vip = S.clients.filter(c => tier(stats[c.id])[0] === "VIP").length;
+  const newThisMonth = S.clients.filter(c => c.created && monthOf(dateOfTs(c.created)) === m).length;
+  const vip = S.clients.filter(c => tier(stats[c.id], c)[0] === "VIP").length;
   const bdays = S.clients.filter(c => c.birthday && c.birthday.slice(5, 7) === m.slice(5)).length;
   $("cKpis").innerHTML = [["Clients", S.clients.length], ["New this month", newThisMonth], ["VIP clients", vip], ["Birthdays this month", bdays]]
     .map(([l, v]) => `<div class="kpi"><span class="label">${l}</span><span class="value num">${fmt0(v)}</span></div>`).join("");
   const q = $("cFilter").value.toLowerCase();
   const list = S.clients.filter(c => !q || c.name.toLowerCase().includes(q) || (c.phone || "").replace(/\s/g, "").includes(q.replace(/\s/g, "")));
   $("clientTable").innerHTML = list.length ? `<table><thead><tr><th>Name</th><th>Phone</th><th class="r">Visits</th><th class="r">Spent (AED)</th><th>Last visit</th><th></th></tr></thead><tbody>${
-    list.map(c => { const st = stats[c.id]; const [t, cls] = tier(st); return `<tr class="clickable ${S.selClient === c.id ? "sel" : ""}" data-client="${c.id}"><td>${esc(c.name)}</td><td class="num">${esc(c.phone || "—")}</td><td class="r num">${st ? st.visits.size : 0}</td><td class="r num">${fmt(st?.spent || 0)}</td><td>${st ? prettyDate(st.last) : "—"}</td><td class="r"><span class="pill ${cls}">${t}</span></td></tr>`; }).join("")}</tbody></table>` : `<p class="empty">${S.clients.length ? "No clients match your search." : "No clients yet. Clients are added when you book them or add them above."}</p>`;
+    list.map(c => { const st = stats[c.id]; const [t, cls] = tier(st, c); return `<tr class="clickable ${S.selClient === c.id ? "sel" : ""}" data-client="${c.id}"><td>${esc(c.name)}</td><td class="num">${esc(c.phone || "—")}</td><td class="r num">${st ? st.visits.size : 0}</td><td class="r num">${fmt(st?.spent || 0)}</td><td>${st ? prettyDate(st.last) : "—"}</td><td class="r"><span class="pill ${cls}">${t}</span></td></tr>`; }).join("")}</tbody></table>` : `<p class="empty">${S.clients.length ? "No clients match your search." : "No clients yet. Clients are added when you book them or add them above."}</p>`;
   const c = S.clients.find(x => x.id === S.selClient);
   if (!c) { $("clientDetail").innerHTML = ""; return; }
   const hist = S.transactions.filter(t => t.clientId === c.id && t.type === "income");
@@ -957,6 +1237,7 @@ function renderClients() {
       <div class="field"><label for="cePhone">Phone</label><input id="cePhone" type="tel" value="${esc(c.phone)}"></div>
       <div class="field"><label for="ceEmail">Email</label><input id="ceEmail" type="email" value="${esc(c.email)}"></div>
       <div class="field"><label for="ceBirthday">Birthday</label><input id="ceBirthday" type="date" value="${esc(c.birthday)}"></div>
+      <div class="field"><label for="ceTier">Customer type</label><select id="ceTier"><option value="" ${!c.tier ? "selected" : ""}>Automatic (${autoTier(clientStats()[c.id])[0]})</option><option ${c.tier === "Regular" ? "selected" : ""}>Regular</option><option ${c.tier === "VIP" ? "selected" : ""}>VIP</option></select></div>
       <div class="field"><label for="ceNotes">Notes</label><textarea id="ceNotes">${esc(c.notes)}</textarea></div>
       <div class="actions" style="justify-content:flex-start"><button class="btn small" type="submit">Save changes</button><button class="btn ghost small" type="button" data-cact="book">Book appointment</button><button class="btn danger small" type="button" data-cact="delete">Delete client</button><button class="btn ghost small" type="button" data-cact="close">Close</button></div>
     </form>
@@ -966,13 +1247,21 @@ function renderClients() {
     </div></div>`;
 }
 $("cFilter").addEventListener("input", renderClients);
+$("cPhone").addEventListener("input", () => { const d = findByPhone($("cPhone").value); $("cDup").hidden = !d; if (d) $("cDup").innerHTML = `<div class="dup-actions"><span><strong>A customer already exists with this mobile number:</strong> ${esc(d.name)} (${esc(d.phone)})</span><button class="btn small" type="button" data-openclient="${d.id}">Open profile</button></div>`; });
 $("clientForm").addEventListener("submit", async e => {
   e.preventDefault();
   const name = $("cName").value.trim(); if (!name) return;
-  await save("clients", newId(), { name, phone: $("cPhone").value.trim(), email: $("cEmail").value.trim(), birthday: $("cBirthday").value, notes: $("cNotes").value.trim(), created: Date.now() });
-  toast(`${name} added`); ["cName","cPhone","cEmail","cBirthday","cNotes"].forEach(id => $(id).value = "");
+  const dup = findByPhone($("cPhone").value);
+  if (dup) {
+    $("cDup").innerHTML = `<div class="dup-actions"><span><strong>A customer already exists with this mobile number:</strong> ${esc(dup.name)} (${esc(dup.phone)})</span><button class="btn small" type="button" data-openclient="${dup.id}">Open profile</button></div>`;
+    $("cDup").hidden = false; return;
+  }
+  $("cDup").hidden = true;
+  await save("clients", newId(), { name, phone: $("cPhone").value.trim(), email: $("cEmail").value.trim(), birthday: $("cBirthday").value, tier: $("cTier").value, notes: $("cNotes").value.trim(), created: Date.now() });
+  toast(`${name} added`); ["cName","cPhone","cEmail","cBirthday","cNotes","cTier"].forEach(id => $(id).value = "");
 });
 $("tab-clients").addEventListener("click", async e => {
+  const op = e.target.closest("[data-openclient]"); if (op) { S.selClient = op.dataset.openclient; $("cDup").hidden = true; renderClients(); $("clientDetail").scrollIntoView({ block: "nearest", behavior: "smooth" }); return; }
   const row = e.target.closest("[data-client]"); if (row) { S.selClient = row.dataset.client; renderClients(); return; }
   const b = e.target.closest("[data-cact]"); if (!b) return;
   const c = S.clients.find(x => x.id === S.selClient); if (!c) return;
@@ -982,7 +1271,9 @@ $("tab-clients").addEventListener("click", async e => {
 });
 $("tab-clients").addEventListener("submit", async e => {
   if (e.target.id !== "clientEdit") return; e.preventDefault();
-  await patch("clients", S.selClient, { name: $("ceName").value.trim(), phone: $("cePhone").value.trim(), email: $("ceEmail").value.trim(), birthday: $("ceBirthday").value, notes: $("ceNotes").value.trim() });
+  const dup = findByPhone($("cePhone").value, S.selClient);
+  if (dup) { toast(`Another customer already uses this number: ${dup.name}`); return; }
+  await patch("clients", S.selClient, { name: $("ceName").value.trim(), phone: $("cePhone").value.trim(), email: $("ceEmail").value.trim(), birthday: $("ceBirthday").value, tier: $("ceTier").value, notes: $("ceNotes").value.trim() });
   toast("Client updated");
 });
 
@@ -1083,7 +1374,7 @@ function renderReports() {
   $("rPL").innerHTML = list.length ? `<table><thead><tr><th>Income</th><th class="r">AED</th></tr></thead><tbody>${rows(inc)}<tr class="total"><td>Total income</td><td class="r num pos">${fmt(s.inc)}</td></tr></tbody></table>
     <table style="margin-top:14px"><thead><tr><th>Expenses</th><th class="r">AED</th></tr></thead><tbody>${rows(exp)}<tr class="total"><td>Total expenses</td><td class="r num neg">${fmt(s.exp)}</td></tr><tr class="total"><td>Net profit</td><td class="r num ${s.net >= 0 ? "pos" : "neg"}">${fmt(s.net)}</td></tr></tbody></table>` : `<p class="empty">No entries in ${monthName(m)}.</p>`;
   $("rVat").innerHTML = `<table><tbody><tr><td>Output VAT on sales</td><td class="r num">${fmt(s.outVat)}</td></tr><tr><td>Input VAT on expenses</td><td class="r num">${fmt(s.inVat)}</td></tr><tr class="total"><td>Net VAT ${s.outVat - s.inVat >= 0 ? "payable" : "refundable"}</td><td class="r num">${fmt(Math.abs(s.outVat - s.inVat))}</td></tr></tbody></table><p class="sub" style="margin-top:6px">An estimate from the amounts entered. Confirm figures with your accountant before filing with the FTA.</p>`;
-  const pay = groupBy(list.filter(t => t.type === "income"), t => t.pay);
+  const pay = {}; for (const t of list.filter(t => t.type === "income")) { const p = payParts(t); [["Cash", p.cash], ["Card", p.card], ["Bank transfer", p.bank], ["Other", p.other]].forEach(([k, v]) => { if (v) pay[k] = (pay[k] || 0) + v; }); }
   $("rPay").innerHTML = Object.keys(pay).length ? `<table><tbody>${rows(pay)}</tbody></table>` : `<p class="empty">No income this month.</p>`;
   const cl = Object.entries(groupBy(list.filter(t => t.type === "income" && t.clientName), t => t.clientName)).sort((a, b) => b[1] - a[1]).slice(0, 5);
   $("rClients").innerHTML = cl.length ? `<table><tbody>${cl.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="r num">${fmt(v)}</td></tr>`).join("")}</tbody></table>` : `<p class="empty">Link sales to clients to see your top spenders.</p>`;
@@ -1093,7 +1384,7 @@ $("exportCsv").addEventListener("click", async () => {
   const m = $("rMonth").value || monthOf(today());
   const list = S.transactions.filter(t => monthOf(t.date) === m).sort((a, b) => a.date.localeCompare(b.date));
   const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const csv = ["Date,Invoice,Type,Category,Description,Client,Paid by,Staff,Amount AED,VAT AED", ...list.map(t => [t.date, t.invoiceNo, t.type, t.category, t.desc, t.clientName, t.pay, t.staff, t.amount.toFixed(2), (t.vat || 0).toFixed(2)].map(q).join(","))].join("\n");
+  const csv = ["Date,Invoice,Type,Category,Description,Client,Paid by,Staff,Amount AED,VAT AED", ...list.map(t => [t.date, t.invoiceNo, t.type, t.category, t.desc, t.clientName, payLabel(t), t.staff, t.amount.toFixed(2), (t.vat || 0).toFixed(2)].map(q).join(","))].join("\n");
   try { await downloads.save({ filename: `salon-ledger-${m}.csv`, data: csv }); } catch (e) { if (e?.code !== "declined") toast("The export could not be saved."); }
 });
 
@@ -1111,9 +1402,8 @@ function renderSettings() {
 $("bizForm").addEventListener("submit", async e => {
   e.preventDefault();
   const open = Math.min(23, Math.max(0, +$("zOpen").value || 10)), close = Math.min(24, Math.max(open + 1, +$("zClose").value || 22));
-  const data = { name: $("zName").value.trim(), trn: $("zTrn").value.trim(), address: $("zAddr").value.trim(), phone: $("zPhone").value.trim(), openHour: open, closeHour: close, footer: $("zFooter").value.trim() };
-  if (!db) { S.settings = data; renderAll(); toast("Details saved"); return; }
-  try { await db.doc("settings/business").set(data); toast("Details saved"); } catch { toast("Could not save. Try again."); }
+  const data = { ...S.settings, name: $("zName").value.trim(), trn: $("zTrn").value.trim(), address: $("zAddr").value.trim(), phone: $("zPhone").value.trim(), openHour: open, closeHour: close, footer: $("zFooter").value.trim() };
+  try { await db.doc("settings/business").set(data); toast("Details saved"); } catch (e) { toast(e.code === "readonly" ? e.message : "Could not save. Try again."); }
 });
 $("svcForm").addEventListener("submit", async e => {
   e.preventDefault();
@@ -1145,7 +1435,7 @@ function openReceipt(id, fallback) {
     <div class="row"><span>Subtotal excl. VAT</span><span class="num">${fmt(net)}</span></div>
     <div class="row"><span>VAT 5%</span><span class="num">${fmt(t.vat || 0)}</span></div>
     <div class="row big"><span>Total AED</span><span class="num">${fmt(t.amount)}</span></div>
-    <div class="row"><span>Paid by</span><span>${esc(t.pay)}</span></div>
+    <div class="row"><span>Paid by</span><span>${esc(payLabel(t))}</span></div>
     <div class="c">${esc(z.footer || "Thank you for visiting")}</div>`;
   $("rcptTitle").textContent = isTax ? "Tax invoice" : "Receipt";
   $("rcptHint").hidden = !!(z.name && z.trn);
@@ -1160,7 +1450,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("overla
 function receiptText(t) {
   const { z, inv, isTax, net } = receiptData(t);
   return [z.name || "Receipt", z.address, z.phone, z.trn && `TRN ${z.trn}`, "", isTax ? "TAX INVOICE" : "RECEIPT", `Invoice: ${inv}`, `Date: ${longDate(t.date)}`, t.clientName && `Client: ${t.clientName}`, "",
-    `${t.desc || t.category}${t.itemQty ? ` x${t.itemQty}` : ""}: AED ${fmt(net)}`, `VAT 5%: AED ${fmt(t.vat || 0)}`, `Total: AED ${fmt(t.amount)}`, `Paid by ${t.pay}`, "", z.footer || "Thank you for visiting"].filter(x => x !== undefined && x !== null && x !== false).join("\n");
+    `${t.desc || t.category}${t.itemQty ? ` x${t.itemQty}` : ""}: AED ${fmt(net)}`, `VAT 5%: AED ${fmt(t.vat || 0)}`, `Total: AED ${fmt(t.amount)}`, `Paid by ${payLabel(t)}`, "", z.footer || "Thank you for visiting"].filter(x => x !== undefined && x !== null && x !== false).join("\n");
 }
 $("rcptCopy").addEventListener("click", async () => {
   const txt = receiptText(S.rcpt);
@@ -1182,7 +1472,7 @@ $("rcptPdf").addEventListener("click", async () => {
   y += 2; rule();
   row(`${t.desc || t.category}${t.itemQty ? ` x${t.itemQty}` : ""}`, fmt(net));
   y += 1; rule();
-  row("Subtotal excl. VAT", fmt(net)); row("VAT 5%", fmt(t.vat || 0)); row("Total AED", fmt(t.amount), true); row("Paid by", t.pay);
+  row("Subtotal excl. VAT", fmt(net)); row("VAT 5%", fmt(t.vat || 0)); row("Total AED", fmt(t.amount), true); row("Paid by", payLabel(t));
   y += 4; center(z.footer || "Thank you for visiting", 8.5);
   try { await downloads.save({ filename: `${inv}.pdf`, data: doc.output("arraybuffer") }); }
   catch (e) { if (e?.code !== "declined") toast("The PDF could not be saved."); }
@@ -1200,23 +1490,396 @@ $("clearSample").addEventListener("click", async e => {
 /* ---------- render ---------- */
 function renderAll() {
   $("sampleBar").hidden = !COLS.some(c => S[c].some(x => x.sample));
-  $("brandName").textContent = S.settings.name || "Salon & Spa Ledger";
+  $("brandName").textContent = S.settings.name || S.status?.salon?.name || "Salon Ledger";
   $("clientList").innerHTML = S.clients.map(c => `<option value="${esc(c.name)}">${esc(c.phone || "")}</option>`).join("");
-  ({ dashboard: renderDashboard, appts: renderAppts, money: renderMoney, tally: renderTally, clients: renderClients, inventory: renderInventory, staff: renderStaff, reports: renderReports, settings: renderSettings })[S.tab]?.();
+  ({ dashboard: renderDashboard, appts: renderAppts, money: renderMoney, tally: renderTally, clients: renderClients, inventory: renderInventory, staff: renderStaff, reports: () => { renderDaily(); renderReports(); }, settings: () => { renderSettings(); renderAccount(); }, admin: renderAdmin })[S.tab]?.();
+}
+
+/* ---------- daily profit & loss ---------- */
+function renderDaily() {
+  const d = $("dDate").value || today();
+  const list = S.transactions.filter(t => t.date === d);
+  const s = sums(list);
+  const appts = S.appointments.filter(a => a.date === d);
+  $("dSub").textContent = longDate(d);
+  $("dKpis").innerHTML = [["Income", s.inc, ""], ["Expenses", s.exp, ""], ["Net profit", s.net, s.net >= 0 ? "pos" : "neg"], ["VAT payable", s.outVat - s.inVat, ""]]
+    .map(([l, v, c]) => `<div class="kpi"><span class="label">${l}</span><span class="value num ${c}"><small>AED</small>${fmt(v)}</span></div>`).join("");
+  const rows = obj => Object.entries(obj).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="r num">${fmt(v)}</td></tr>`).join("");
+  const inc = groupBy(list.filter(t => t.type === "income"), t => t.category), exp = groupBy(list.filter(t => t.type === "expense"), t => t.category);
+  $("dPL").innerHTML = list.length ? `<table><thead><tr><th>Income</th><th class="r">AED</th></tr></thead><tbody>${rows(inc) || '<tr><td colspan="2" class="sub">No income</td></tr>'}<tr class="total"><td>Total income</td><td class="r num pos">${fmt(s.inc)}</td></tr></tbody></table>
+    <table style="margin-top:14px"><thead><tr><th>Expenses</th><th class="r">AED</th></tr></thead><tbody>${rows(exp) || '<tr><td colspan="2" class="sub">No expenses</td></tr>'}<tr class="total"><td>Total expenses</td><td class="r num neg">${fmt(s.exp)}</td></tr>
+    <tr class="total"><td>Net profit</td><td class="r num ${s.net >= 0 ? "pos" : "neg"}">${fmt(s.net)}</td></tr><tr><td class="sub">Income excluding VAT</td><td class="r num sub">${fmt(s.inc - s.outVat)}</td></tr></tbody></table>` : `<p class="empty">No entries on ${prettyDate(d)}.</p>`;
+  const { inc: pi } = dayFigures(d);
+  const st = groupBy(list.filter(t => t.type === "income" && t.staff), t => t.staff);
+  $("dSide").innerHTML = `<table><thead><tr><th>Payments received</th><th class="r">AED</th></tr></thead><tbody><tr><td>Cash</td><td class="r num">${fmt(pi.cash)}</td></tr><tr><td>Card</td><td class="r num">${fmt(pi.card)}</td></tr><tr><td>Bank transfer</td><td class="r num">${fmt(pi.bank)}</td></tr></tbody></table>
+    <table style="margin-top:14px"><thead><tr><th>Income by staff</th><th class="r">AED</th></tr></thead><tbody>${rows(st) || '<tr><td colspan="2" class="sub">No staff recorded</td></tr>'}</tbody></table>
+    <table style="margin-top:14px"><thead><tr><th>Bookings</th><th class="r">Count</th></tr></thead><tbody>${["Completed", "Booked", "No-show", "Cancelled"].map(k => `<tr><td>${k}</td><td class="r num">${appts.filter(a => a.status === k).length}</td></tr>`).join("")}</tbody></table>`;
+}
+$("dDate").addEventListener("change", renderDaily);
+$("dPrev").addEventListener("click", () => { $("dDate").value = addDays($("dDate").value || today(), -1); renderDaily(); });
+$("dNext").addEventListener("click", () => { $("dDate").value = addDays($("dDate").value || today(), 1); renderDaily(); });
+$("dCsv").addEventListener("click", async () => {
+  const d = $("dDate").value || today();
+  const list = S.transactions.filter(t => t.date === d);
+  const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const csv = ["Date,Invoice,Type,Category,Description,Client,Paid by,Staff,Amount AED,VAT AED", ...list.map(t => [t.date, t.invoiceNo, t.type, t.category, t.desc, t.clientName, payLabel(t), t.staff, t.amount.toFixed(2), (t.vat || 0).toFixed(2)].map(q).join(","))].join("\n");
+  try { await downloads.save({ filename: `salon-day-${d}.csv`, data: csv }); } catch {}
+});
+
+/* ---------- subscription + device status ---------- */
+const fmtDay = s => s ? longDate(s) : "—";
+function supportLine(st) {
+  const sp = st?.support || {};
+  return [sp.support_phone && `Phone/WhatsApp ${sp.support_phone}`, sp.support_email && `Email ${sp.support_email}`].filter(Boolean).join(" · ") || "Contact Hostready";
+}
+function applyStatus(st) {
+  S.status = st || null;
+  const salon = st?.salon, role = st?.role || "owner";
+  document.body.classList.toggle("role-staff", role === "staff");
+  document.body.classList.toggle("readonly", !!(salon && !salon.writable));
+  $("rolePill").hidden = !st?.member; $("rolePill").textContent = role === "staff" ? "Staff" : "Owner";
+  document.querySelector('[data-tab="admin"]').hidden = !st?.admin;
+  if (st && !st.member && st.admin) {
+    document.querySelectorAll("#tabs button").forEach(b => b.hidden = b.dataset.tab !== "admin");
+    if (S.tab !== "admin") showTab("admin");
+  } else if (role === "staff" && ["dashboard", "reports", "staff"].includes(S.tab)) showTab("appts");
+  // subscription banner
+  const sb = $("subBanner");
+  if (!salon) sb.hidden = true;
+  else {
+    const sp = st.support || {};
+    let html = "", cls = "";
+    if (salon.status === "suspended") { html = `<span><strong>This salon account is suspended.</strong> You can view and export your data. ${esc(supportLine(st))}</span>`; cls = "bad"; }
+    else if (!salon.writable) { html = `<span><strong>Your subscription ended on ${fmtDay(salon.active_until)}.</strong> You can view and export your data, but new entries are paused. To renew, contact Hostready: ${esc(supportLine(st))}${sp.bank_details ? ` · Bank: ${esc(sp.bank_details)}` : ""}</span>`; cls = "bad"; }
+    else if (salon.on_trial) { html = `<span><strong>Free trial:</strong> ${salon.days_left} day${salon.days_left === 1 ? "" : "s"} left (ends ${fmtDay(salon.active_until)}). To subscribe, contact Hostready: ${esc(supportLine(st))}</span>`; cls = "info"; }
+    else if (salon.days_left <= 7) { html = `<span><strong>Your subscription ends on ${fmtDay(salon.active_until)}</strong> (${salon.days_left} day${salon.days_left === 1 ? "" : "s"} left). Renew to avoid interruption: ${esc(supportLine(st))}</span>`; cls = ""; }
+    sb.hidden = !html; sb.className = "notice banner " + cls; sb.innerHTML = html;
+  }
+  // device banner
+  const dv = st?.device, db_ = $("devBanner");
+  if (dv && dv.status === "pending" && dv.ok) {
+    db_.hidden = false;
+    db_.innerHTML = `<span><strong>This device has temporary access until ${dtFmt(dv.temp_until)}.</strong> ${role === "owner" ? "Approve it to keep using it." : "Ask the salon owner to approve it in Settings → Devices."}</span>${role === "owner" ? `<button class="btn small" id="approveMe">Approve this device</button>` : ""}`;
+  } else db_.hidden = true;
+  if (S.tab === "settings") renderAccount();
+  queueRender();
+}
+document.addEventListener("click", async e => {
+  if (e.target.id !== "approveMe") return;
+  const { error } = await LedgerSync.rpc("approve_device", { p_id: S.status.device.id });
+  if (error) toast(cleanErr(error)); else { toast("Device approved"); LedgerSync.refresh(); }
+});
+const cleanErr = e => String(e?.message || e || "Something went wrong").replace(/^[A-Z_]+:\s*/, "");
+
+/* ---------- settings: account, devices, team ---------- */
+let devRows = [], teamRows = { members: [], invites: [] };
+async function loadDevices() {
+  const { data } = await LedgerSync.from("devices").select("*").order("first_seen");
+  devRows = data || []; renderDevices();
+}
+async function loadTeam() {
+  const [m, i] = await Promise.all([LedgerSync.from("members").select("*").order("created_at"), LedgerSync.from("invites").select("*").order("created_at")]);
+  teamRows = { members: m.data || [], invites: i.data || [] }; renderTeam();
+}
+LedgerSync._devicesChanged = () => { if (S.tab === "settings" && S.status?.role === "owner") loadDevices(); };
+function devStatusPill(d) {
+  if (d.status === "approved") return `<span class="pill ok">Approved</span>`;
+  if (d.status === "revoked") return `<span class="pill Cancelled">Removed</span>`;
+  return new Date(d.temp_until) > new Date() ? `<span class="pill low">Temporary until ${dtFmt(d.temp_until)}</span>` : `<span class="pill Cancelled">Waiting for approval</span>`;
+}
+function renderDevices() {
+  const st = S.status, me = st?.device?.id, salon = st?.salon || {};
+  const approved = devRows.filter(d => d.status === "approved").length;
+  $("devSummary").textContent = `${approved} of ${salon.device_limit ?? "?"} devices approved on your ${salon.plan || ""} plan. Extra devices: contact Hostready.`;
+  $("devTable").innerHTML = devRows.length ? `<table><thead><tr><th>Device</th><th>Type</th><th>Status</th><th>Last used</th><th>By</th><th></th></tr></thead><tbody>${devRows.map(d => `<tr><td>${esc(d.name || "Device")}${d.id === me ? ' <span class="pill in">This device</span>' : ""}</td><td>${esc(d.platform || "")}</td><td>${devStatusPill(d)}</td><td>${d.last_seen ? dtFmt(d.last_seen) : "—"}</td><td class="sub">${esc(d.user_email || "")}</td><td><div class="actions">${d.status !== "approved" ? `<button class="btn small" data-devact="approve" data-id="${d.id}">Approve</button>` : ""}${d.status !== "revoked" ? `<button class="btn small danger" data-devact="revoke" data-id="${d.id}">Remove</button>` : ""}</div></td></tr>`).join("")}</tbody></table>` : `<p class="empty">No devices yet.</p>`;
+}
+$("devTable").addEventListener("click", async e => {
+  const b = e.target.closest("[data-devact]"); if (!b) return;
+  if (b.dataset.devact === "revoke" && !arm(b, b.dataset.id === S.status?.device?.id ? "Remove this device?" : "Confirm remove")) return;
+  const { error } = await LedgerSync.rpc(b.dataset.devact === "approve" ? "approve_device" : "revoke_device", { p_id: b.dataset.id });
+  if (error) toast(cleanErr(error)); else { toast(b.dataset.devact === "approve" ? "Device approved" : "Device removed"); loadDevices(); LedgerSync.refresh(); }
+});
+$("devRefresh").addEventListener("click", loadDevices);
+function renderTeam() {
+  const me = LedgerSync.user()?.id;
+  const rows = teamRows.members.map(m => `<tr><td>${esc(m.name || "")}${m.user_id === me ? ' <span class="pill in">You</span>' : ""}</td><td>${esc(m.email || "")}</td><td><select data-mrole="${m.user_id}" ${m.user_id === me ? "disabled" : ""}><option value="staff" ${m.role === "staff" ? "selected" : ""}>Staff</option><option value="owner" ${m.role === "owner" ? "selected" : ""}>Owner</option></select></td><td>${m.active ? '<span class="pill ok">Active</span>' : '<span class="pill Cancelled">Disabled</span>'}</td><td>${m.user_id === me ? "" : `<button class="btn small ${m.active ? "danger" : "ghost"}" data-mactive="${m.user_id}" data-to="${!m.active}">${m.active ? "Disable" : "Enable"}</button>`}</td></tr>`)
+    .concat(teamRows.invites.map(i => `<tr><td>${esc(i.name || "")}</td><td>${esc(i.email)}</td><td>${i.role === "owner" ? "Owner" : "Staff"}</td><td><span class="pill low">Not activated yet</span></td><td><button class="btn small ghost" data-cancelinv="${esc(i.email)}">Cancel</button></td></tr>`));
+  $("teamTable").innerHTML = rows.length ? `<table><thead><tr><th>Name</th><th>Email</th><th>Access</th><th>Status</th><th></th></tr></thead><tbody>${rows.join("")}</tbody></table>` : "";
+}
+$("teamForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const { data, error } = await LedgerSync.rpc("invite_member", { p_salon: S.status.salon.id, p_email: $("tmEmail").value, p_name: $("tmName").value.trim(), p_role: $("tmRole").value });
+  if (error) { toast(cleanErr(error)); return; }
+  toast(data === "linked" ? "Login added. They can sign in now." : `Login added. Ask them to open the app, enter Salon Code ${S.status.salon.code} and choose “First time? Activate your account”.`);
+  $("tmEmail").value = ""; $("tmName").value = ""; loadTeam();
+});
+$("teamTable").addEventListener("change", async e => {
+  const u = e.target.dataset.mrole; if (!u) return;
+  const m = teamRows.members.find(x => x.user_id === u);
+  const { error } = await LedgerSync.rpc("set_member", { p_user: u, p_role: e.target.value, p_active: m.active });
+  if (error) toast(cleanErr(error)); else { toast("Access updated"); loadTeam(); }
+});
+$("teamTable").addEventListener("click", async e => {
+  const a = e.target.closest("[data-mactive]"), c = e.target.closest("[data-cancelinv]");
+  if (a) { const m = teamRows.members.find(x => x.user_id === a.dataset.mactive); const { error } = await LedgerSync.rpc("set_member", { p_user: m.user_id, p_role: m.role, p_active: a.dataset.to === "true" }); if (error) toast(cleanErr(error)); else loadTeam(); }
+  if (c) { const { error } = await LedgerSync.rpc("cancel_invite", { p_email: c.dataset.cancelinv }); if (error) toast(cleanErr(error)); else loadTeam(); }
+});
+let accountLoaded = false;
+function renderAccount() {
+  const st = S.status, salon = st?.salon;
+  $("subInfo").innerHTML = salon ? `<div class="row"><span>Salon</span><strong>${esc(salon.name)}</strong></div><div class="row"><span>Salon Code</span><strong>${esc(salon.code)}</strong></div><div class="row"><span>Plan</span><strong>${esc(salon.plan)}</strong></div><div class="row"><span>${salon.on_trial ? "Trial ends" : "Paid until"}</span><strong>${fmtDay(salon.active_until)}</strong></div><div class="row"><span>Days left</span><strong class="${salon.days_left <= 7 ? "neg" : "pos"}">${Math.max(0, salon.days_left)}</strong></div><p class="sub" style="margin-top:6px">To renew: ${esc(supportLine(st))}</p>` : "";
+  if (document.activeElement !== $("myDevName")) $("myDevName").value = st?.device?.name || "";
+  $("alMins").value = String(S.settings.alertMins ?? 10); $("alSound").checked = S.settings.alertSound !== false;
+  if (!accountLoaded && st?.role === "owner") { accountLoaded = true; loadDevices(); loadTeam(); }
+}
+$("myDevSave").addEventListener("click", async () => {
+  const n = $("myDevName").value.trim(); if (!n) return;
+  LedgerSync.setDeviceName(n);
+  const { error } = await LedgerSync.rpc("rename_device", { p_id: S.status.device.id, p_name: n });
+  if (error) toast(cleanErr(error)); else { toast("Device name saved"); LedgerSync.refresh(); if (S.status?.role === "owner") loadDevices(); }
+});
+["alMins", "alSound"].forEach(id => $(id).addEventListener("change", async () => {
+  try { await db.doc("settings/business").set({ ...S.settings, alertMins: +$("alMins").value, alertSound: $("alSound").checked }); toast("Alert settings saved"); } catch (e) { toast(e.message); }
+}));
+
+/* ---------- booking alerts ---------- */
+let audioCtx = null;
+function unlockAudio() { try { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === "suspended") audioCtx.resume(); } catch {} }
+document.addEventListener("pointerdown", () => {
+  unlockAudio();
+  if (!isNative && "Notification" in window && Notification.permission === "default" && ledgerStarted) Notification.requestPermission().catch(() => {});
+}, { passive: true });
+function chime() {
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime + 0.02;
+  [784, 988, 1319].forEach((f, i) => {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = "sine"; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t0 + i * 0.18); g.gain.exponentialRampToValueAtTime(0.35, t0 + i * 0.18 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.18 + 0.6);
+    o.connect(g).connect(audioCtx.destination); o.start(t0 + i * 0.18); o.stop(t0 + i * 0.18 + 0.65);
+  });
+}
+const alertMins = () => +(S.settings.alertMins ?? 10);
+function showAlert(list, test) {
+  const now = nowParts().min, first = list[0];
+  $("alWhen").textContent = test ? "Test alert" : list.length === 1 ? `Starts in ${Math.max(0, toMin(first.time) - now)} minutes` : `${list.length} bookings starting soon`;
+  $("alTitle").textContent = list.length === 1 ? `${esc(first.clientName)} at ${time12(first.time)}` : "Upcoming bookings";
+  $("alBody").innerHTML = list.map(a => `<div class="row" style="font-size:1rem;align-items:flex-start"><span><strong>${time12(a.time)}</strong> · ${esc(a.clientName)}${isVip(a.clientId) ? '<span class="badge-vip">VIP</span>' : ""}<span class="sub" style="display:block">${esc(a.serviceName)} with ${esc(a.staff)}</span></span></div>`).join("");
+  $("alertBox").hidden = false; $("alOk").focus();
+  if (S.settings.alertSound !== false) { chime(); setTimeout(chime, 1500); }
+  if (!isNative) {
+    try {
+      if ("Notification" in window && Notification.permission === "granted")
+        new Notification(list.length === 1 ? `Booking at ${time12(first.time)}: ${first.clientName}` : `${list.length} bookings starting soon`, { body: list.map(a => `${time12(a.time)} ${a.clientName} – ${a.serviceName} (${a.staff})`).join("\n"), icon: "icons/icon-192.png", tag: "salon-booking" });
+    } catch {}
+  }
+}
+function checkAlerts() {
+  const mins = alertMins(); if (!mins || !ledgerStarted) return;
+  const { date, min } = nowParts();
+  let done = {}; try { done = JSON.parse(localStorage.getItem("ssl:alerted")) || {}; } catch {}
+  const due = S.appointments.filter(a => a.date === date && a.status === "Booked" && !done[a.id] && toMin(a.time) - min <= mins && toMin(a.time) - min >= -1);
+  if (!due.length) return;
+  due.forEach(a => done[a.id] = date);
+  for (const k in done) if (done[k] < date) delete done[k];
+  try { localStorage.setItem("ssl:alerted", JSON.stringify(done)); } catch {}
+  showAlert(due);
+}
+setInterval(checkAlerts, 20000);
+$("alOk").addEventListener("click", () => $("alertBox").hidden = true);
+$("alOpen").addEventListener("click", () => { $("alertBox").hidden = true; showTab("appts"); });
+$("alTest").addEventListener("click", () => {
+  unlockAudio();
+  if (!isNative && "Notification" in window && Notification.permission === "default") Notification.requestPermission().catch(() => {});
+  showAlert([{ id: "test", time: fromMin(Math.min(23 * 60 + 45, nowParts().min + alertMins())), clientName: "Test client", serviceName: "Haircut & blow-dry", staff: "Your staff" }], true);
+});
+// Android: schedule real phone notifications so alerts arrive even when the app is closed
+let nativeTimer = null;
+function scheduleNative() {
+  if (!isNative) return;
+  clearTimeout(nativeTimer);
+  nativeTimer = setTimeout(async () => {
+    try {
+      const C = window.Capacitor, LN = C.Plugins.LocalNotifications || C.registerPlugin("LocalNotifications");
+      const perm = await LN.checkPermissions(); if (perm.display !== "granted") { const r = await LN.requestPermissions(); if (r.display !== "granted") return; }
+      const pend = await LN.getPending(); if (pend.notifications?.length) await LN.cancel({ notifications: pend.notifications.map(n => ({ id: n.id })) });
+      const mins = alertMins(); if (!mins) return;
+      const now = Date.now();
+      const items = S.appointments.filter(a => a.status === "Booked").map(a => ({ a, at: zonedToDate(a.date, toMin(a.time) - mins) })).filter(x => x.at.getTime() > now + 30000).sort((x, y) => x.at - y.at).slice(0, 60);
+      const hash = str => { let h = 0; for (const ch of str) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h) % 2000000000 + 1; };
+      if (items.length) await LN.schedule({ notifications: items.map(({ a, at }) => ({ id: hash(a.id), title: `Booking in ${mins} min: ${a.clientName}`, body: `${time12(a.time)} · ${a.serviceName} with ${a.staff}`, schedule: { at, allowWhileIdle: true } })) });
+    } catch {}
+  }, 1500);
+}
+
+/* ---------- Hostready admin ---------- */
+let adSalons = [], adSel = null, adDetail = null;
+async function loadAdmin() {
+  const { data, error } = await LedgerSync.rpc("admin_overview");
+  if (error) { toast(cleanErr(error)); return; }
+  adSalons = data || [];
+  const { data: set } = await LedgerSync.from("app_settings").select("*");
+  S.adminSettings = Object.fromEntries((set || []).map(r => [r.key, r.value]));
+  renderAdmin(true);
+}
+function salonState(x) {
+  if (x.status === "suspended") return ["Suspended", "Cancelled"];
+  if (x.days_left == null || x.days_left < 0) return ["Expired", "Cancelled"];
+  if (x.trial_ends && (!x.paid_until || x.paid_until < x.trial_ends)) return ["Trial", "Booked"];
+  if (x.days_left <= 7) return ["Expiring", "low"];
+  return ["Active", "ok"];
+}
+let adminLoaded = false;
+function renderAdmin(fromLoad) {
+  if (!S.status?.admin) return;
+  if (!adminLoaded && !fromLoad) { adminLoaded = true; loadAdmin(); return; }
+  const st = adSalons.map(x => salonState(x)[0]);
+  $("adKpis").innerHTML = [["Salons", adSalons.length], ["Active", st.filter(x => x === "Active" || x === "Expiring").length], ["On trial", st.filter(x => x === "Trial").length], ["Expired / suspended", st.filter(x => x === "Expired" || x === "Suspended").length]]
+    .map(([l, v]) => `<div class="kpi"><span class="label">${l}</span><span class="value num">${v}</span></div>`).join("");
+  const q = $("adFilter").value.toLowerCase();
+  const list = adSalons.filter(x => !q || x.name.toLowerCase().includes(q) || x.code.toLowerCase().includes(q));
+  $("adTable").innerHTML = list.length ? `<table><thead><tr><th>Salon</th><th>Plan</th><th>Devices</th><th>Logins</th><th>Active until</th><th>Status</th><th></th></tr></thead><tbody>${list.map(x => { const [l, c] = salonState(x); return `<tr class="clickable ${adSel === x.id ? "sel" : ""}" data-adsalon="${x.id}"><td><strong>${esc(x.name)}</strong><div class="sub">${esc(x.code)}${x.contact_phone ? " · " + esc(x.contact_phone) : ""}</div></td><td>${esc(x.plan)}</td><td class="num">${x.devices_approved}/${x.device_limit}${x.devices_pending ? ` <span class="pill low">${x.devices_pending} waiting</span>` : ""}</td><td class="num">${x.logins}${x.invites ? ` <span class="sub">+${x.invites.length} invited</span>` : ""}</td><td>${x.active_until ? prettyDate(x.active_until) + ` <span class="sub">(${x.days_left} days)</span>` : "—"}</td><td><span class="pill ${c}">${l}</span></td><td class="r"><button class="btn small ghost">Manage</button></td></tr>`; }).join("")}</tbody></table>` : `<p class="empty">No salons yet. Press New salon to add your first customer.</p>`;
+  const a = S.adminSettings || {};
+  if (!$("adSettings").contains(document.activeElement)) { $("asName").value = a.support_name || ""; $("asPhone").value = a.support_phone || ""; $("asEmail").value = a.support_email || ""; $("asTrn").value = a.company_trn || ""; $("asAddr").value = a.company_address || ""; $("asBank").value = a.bank_details || ""; }
+  renderAdminDetail();
+}
+async function openAdminSalon(id) {
+  adSel = id;
+  const { data, error } = await LedgerSync.rpc("admin_salon_detail", { p_salon: id });
+  if (error) { toast(cleanErr(error)); return; }
+  adDetail = data; renderAdmin(true);
+  $("adDetail").scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+function renderAdminDetail() {
+  const x = adSalons.find(s => s.id === adSel);
+  if (!x || !adDetail) { $("adDetail").innerHTML = ""; return; }
+  const devs = adDetail.devices || [], mem = adDetail.members || [], inv = adDetail.invites || [], pays = adDetail.payments || [];
+  $("adDetail").innerHTML = `<div class="detail" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+    <form id="adEdit" style="display:grid;gap:10px;align-content:start">
+      <h3>${esc(x.name)} <span class="sub">${esc(x.code)}</span></h3>
+      <div class="field"><label for="aeName">Salon name</label><input id="aeName" value="${esc(x.name)}"></div>
+      <div class="field"><label for="aePlan">Plan</label><select id="aePlan">${["Starter", "Business", "Premium"].map(p => `<option ${x.plan === p ? "selected" : ""}>${p}</option>`).join("")}</select></div>
+      <div class="field"><label for="aeDev">Devices included</label><input id="aeDev" type="number" min="1" value="${x.device_limit}"></div>
+      <div class="field"><label for="aeStatus">Account</label><select id="aeStatus"><option value="active" ${x.status === "active" ? "selected" : ""}>Active</option><option value="suspended" ${x.status === "suspended" ? "selected" : ""}>Suspended</option></select></div>
+      <div class="field"><label for="aeCName">Contact name</label><input id="aeCName" value="${esc(x.contact_name || "")}"></div>
+      <div class="field"><label for="aeCPhone">Contact phone</label><input id="aeCPhone" value="${esc(x.contact_phone || "")}"></div>
+      <div class="field"><label for="aeCEmail">Contact email</label><input id="aeCEmail" value="${esc(x.contact_email || "")}"></div>
+      <div class="field"><label for="aeNotes">Notes</label><textarea id="aeNotes">${esc(x.notes || "")}</textarea></div>
+      <div class="actions" style="justify-content:flex-start"><button class="btn small" type="submit">Save salon</button><button class="btn ghost small" type="button" id="aeClose">Close</button></div>
+    </form>
+    <div style="display:grid;gap:14px;align-content:start;min-width:0">
+      <form id="adPay" class="box" style="background:var(--surface)">
+        <h3>Record payment &amp; extend</h3>
+        <p class="sub">${x.active_until ? `Currently active until ${fmtDay(x.active_until)}.` : "No active period yet."} The new period starts the day after.</p>
+        <div class="step-fields">
+          <div class="field"><label for="apDays">Period</label><select id="apDays"><option value="90">90 days</option><option value="180">180 days</option><option value="270">270 days</option><option value="365">365 days</option></select></div>
+          <div class="field"><label for="apAmt">Amount excl. VAT (AED)</label><input id="apAmt" type="number" min="0" step="0.01" required></div>
+          <div class="field"><label for="apMethod">Paid by</label><select id="apMethod"><option>Bank transfer</option><option>Card</option><option>Cash</option><option>Cheque</option></select></div>
+          <div class="field"><label for="apNote">Note</label><input id="apNote"></div>
+        </div>
+        <div class="actions" style="justify-content:flex-start"><button class="btn small" type="submit">Record payment</button></div>
+      </form>
+      <div><h3>Devices</h3>${devs.length ? `<table><tbody>${devs.map(d => `<tr><td>${esc(d.name || "Device")}<div class="sub">${esc(d.platform || "")} · ${esc(d.user_email || "")}</div></td><td>${devStatusPill(d)}</td><td class="r"><div class="actions">${d.status !== "approved" ? `<button class="btn small" data-adev="approve" data-id="${d.id}">Approve</button>` : ""}${d.status !== "revoked" ? `<button class="btn small danger" data-adev="revoke" data-id="${d.id}">Remove</button>` : ""}</div></td></tr>`).join("")}</tbody></table>` : `<p class="sub">No devices yet.</p>`}</div>
+      <div><h3>Logins</h3>${mem.concat(inv).length ? `<table><tbody>${mem.map(m => `<tr><td>${esc(m.name || "")}<div class="sub">${esc(m.email || "")}</div></td><td>${m.role}</td><td>${m.active ? '<span class="pill ok">Active</span>' : '<span class="pill Cancelled">Disabled</span>'}</td></tr>`).join("")}${inv.map(i => `<tr><td>${esc(i.name || "")}<div class="sub">${esc(i.email)}</div></td><td>${i.role}</td><td><span class="pill low">Not activated</span></td></tr>`).join("")}</tbody></table>` : `<p class="sub">No logins.</p>`}
+        <form id="adInvite" class="step-fields" style="margin-top:8px"><div class="field"><label for="aiEmail">Add login email</label><input id="aiEmail" type="email" required></div><div class="field"><label for="aiName">Name</label><input id="aiName"></div><div class="field"><label for="aiRole">Access</label><select id="aiRole"><option value="owner">Owner</option><option value="staff">Staff</option></select></div><div class="actions" style="align-self:end"><button class="btn small ghost" type="submit">Add</button></div></form></div>
+      <div><h3>Payments</h3>${pays.length ? `<table><tbody>${pays.map(p => `<tr><td>${esc(p.invoice_no)}<div class="sub">${prettyDate(p.period_from)} – ${prettyDate(p.period_to)} · ${p.days} days</div></td><td class="r num">${fmt(+p.amount + +p.vat)}</td><td class="r"><button class="btn small ghost" data-adinv="${p.id}">Invoice PDF</button></td></tr>`).join("")}</tbody></table>` : `<p class="sub">No payments yet.</p>`}</div>
+    </div></div>`;
+}
+$("adTable").addEventListener("click", e => { const r = e.target.closest("[data-adsalon]"); if (r) openAdminSalon(r.dataset.adsalon); });
+$("adFilter").addEventListener("input", () => renderAdmin(true));
+$("adReload").addEventListener("click", loadAdmin);
+$("adNewBtn").addEventListener("click", () => { $("adNew").hidden = false; $("anName").focus(); });
+$("adNewCancel").addEventListener("click", () => $("adNew").hidden = true);
+$("adNew").addEventListener("submit", async e => {
+  e.preventDefault();
+  const { data, error } = await LedgerSync.rpc("admin_create_salon", { p_name: $("anName").value, p_code: $("anCode").value, p_plan: $("anPlan").value, p_device_limit: +$("anDev").value || 2, p_owner_email: $("anEmail").value, p_owner_name: $("anOwner").value, p_phone: $("anPhone").value, p_trial_days: +$("anTrial").value || 0 });
+  if (error) { toast(cleanErr(error)); return; }
+  $("adNew").reset(); $("adNew").hidden = true;
+  toast(`Salon created. Give the owner the Salon Code ${data.code} and ask them to choose “First time? Activate your account”.`);
+  await loadAdmin(); openAdminSalon(data.id);
+});
+$("adDetail").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (e.target.id === "adEdit") {
+    const { error } = await LedgerSync.rpc("admin_update_salon", { p_id: adSel, p_name: $("aeName").value, p_plan: $("aePlan").value, p_device_limit: +$("aeDev").value, p_status: $("aeStatus").value, p_contact_name: $("aeCName").value, p_contact_phone: $("aeCPhone").value, p_contact_email: $("aeCEmail").value, p_notes: $("aeNotes").value });
+    if (error) toast(cleanErr(error)); else { toast("Salon saved"); loadAdmin(); }
+  }
+  if (e.target.id === "adPay") {
+    const { data, error } = await LedgerSync.rpc("admin_record_payment", { p_salon: adSel, p_days: +$("apDays").value, p_amount: +$("apAmt").value, p_method: $("apMethod").value, p_note: $("apNote").value });
+    if (error) { toast(cleanErr(error)); return; }
+    toast(`Payment recorded. Active until ${fmtDay(data.salon.paid_until)}. Invoice ${data.payment.invoice_no}.`);
+    await loadAdmin(); await openAdminSalon(adSel);
+    hostreadyInvoice(data.payment, adSalons.find(s => s.id === adSel));
+  }
+  if (e.target.id === "adInvite") {
+    const { error } = await LedgerSync.rpc("invite_member", { p_salon: adSel, p_email: $("aiEmail").value, p_name: $("aiName").value, p_role: $("aiRole").value });
+    if (error) toast(cleanErr(error)); else { toast("Login added"); openAdminSalon(adSel); loadAdmin(); }
+  }
+});
+$("adDetail").addEventListener("click", async e => {
+  if (e.target.id === "aeClose") { adSel = null; adDetail = null; renderAdmin(true); return; }
+  const d = e.target.closest("[data-adev]");
+  if (d) { const { error } = await LedgerSync.rpc(d.dataset.adev === "approve" ? "approve_device" : "revoke_device", { p_id: d.dataset.id }); if (error) toast(cleanErr(error)); else { openAdminSalon(adSel); loadAdmin(); } }
+  const inv = e.target.closest("[data-adinv]");
+  if (inv) hostreadyInvoice((adDetail.payments || []).find(p => p.id === inv.dataset.adinv), adSalons.find(s => s.id === adSel));
+});
+$("adSettings").addEventListener("submit", async e => {
+  e.preventDefault();
+  const rows = [["support_name", $("asName").value], ["support_phone", $("asPhone").value], ["support_email", $("asEmail").value], ["company_trn", $("asTrn").value], ["company_address", $("asAddr").value], ["bank_details", $("asBank").value]].map(([key, value]) => ({ key, value: value.trim() }));
+  const { error } = await LedgerSync.from("app_settings").upsert(rows);
+  if (error) toast(cleanErr(error)); else { toast("Hostready details saved"); loadAdmin(); LedgerSync.refresh(); }
+});
+async function hostreadyInvoice(p, salon) {
+  if (!p || !window.jspdf) return;
+  const a = S.adminSettings || {};
+  const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
+  const L = 20, R = 190; let y = 24;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(18); doc.text(a.support_name || "Hostready LLC", L, y);
+  doc.setFontSize(12); doc.text("TAX INVOICE", R, y, { align: "right" });
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); y += 6;
+  [a.company_address, a.support_phone && `Tel: ${a.support_phone}`, a.support_email, a.company_trn && `TRN: ${a.company_trn}`].filter(Boolean).forEach(l => { doc.text(l, L, y); y += 4.6; });
+  let yr = 30; [[`Invoice no.`, p.invoice_no], [`Date`, longDate(dateOfTs(p.created_at))], [`Paid by`, p.method || "—"]].forEach(([k, v]) => { doc.text(`${k}: ${v}`, R, yr, { align: "right" }); yr += 4.6; });
+  y = Math.max(y, yr) + 8;
+  doc.setFont("helvetica", "bold"); doc.text("Bill to", L, y); doc.setFont("helvetica", "normal"); y += 5;
+  [salon?.name, salon?.contact_name, salon?.contact_phone, salon?.contact_email, `Salon Code: ${salon?.code || ""}`].filter(Boolean).forEach(l => { doc.text(String(l), L, y); y += 4.6; });
+  y += 8; doc.setDrawColor(200); doc.line(L, y, R, y); y += 6;
+  doc.setFont("helvetica", "bold"); doc.text("Description", L, y); doc.text("Amount (AED)", R, y, { align: "right" }); doc.setFont("helvetica", "normal"); y += 7;
+  doc.text(`Salon Ledger subscription – ${salon?.plan || ""} plan – ${p.days} days`, L, y); doc.text(fmt(p.amount), R, y, { align: "right" }); y += 5;
+  doc.setFontSize(8.5); doc.text(`Service period ${longDate(p.period_from)} to ${longDate(p.period_to)}`, L, y); doc.setFontSize(9.5); y += 8;
+  doc.line(L, y, R, y); y += 6;
+  [["Subtotal (excl. VAT)", p.amount], ["VAT 5%", p.vat]].forEach(([k, v]) => { doc.text(k, 130, y); doc.text(fmt(v), R, y, { align: "right" }); y += 5.5; });
+  doc.setFont("helvetica", "bold"); doc.text("Total AED", 130, y); doc.text(fmt(+p.amount + +p.vat), R, y, { align: "right" }); doc.setFont("helvetica", "normal"); y += 12;
+  if (a.bank_details) { doc.setFontSize(8.5); doc.text(doc.splitTextToSize(`Bank details: ${a.bank_details}`, R - L), L, y); y += 8; }
+  doc.setFontSize(8); doc.setTextColor(120); doc.text("© 2026 Hostready LLC. All rights reserved.", L, 285);
+  try { await downloads.save({ filename: `${p.invoice_no}.pdf`, data: doc.output("arraybuffer") }); } catch {}
+}
+
+/* ---------- updates ---------- */
+const APP_VERSION = window.APP_VERSION || "dev";
+$("verText").textContent = `Salon Ledger ${APP_VERSION}`;
+async function checkForUpdate() {
+  if (!isNative || !/^\d+\.\d+\.\d+$/.test(APP_VERSION)) return;
+  try {
+    const r = await fetch("https://api.github.com/repos/hostreadyllc/Saloon-Spa/releases/latest", { headers: { Accept: "application/vnd.github+json" } });
+    if (!r.ok) return;
+    const rel = await r.json(), latest = String(rel.tag_name || "").replace(/^v/, "");
+    const n = v => v.split(".").map(Number), [a1, a2, a3] = n(latest), [b1, b2, b3] = n(APP_VERSION);
+    if (!(a1 > b1 || (a1 === b1 && (a2 > b2 || (a2 === b2 && a3 > b3))))) return;
+    const apk = (rel.assets || []).find(x => /Android\.apk$/.test(x.name));
+    if (!apk) return;
+    const el = $("devBanner").hidden ? $("devBanner") : $("subBanner");
+    el.hidden = false; el.className = "notice banner info";
+    el.innerHTML = `<span><strong>A new version (${esc(latest)}) is available.</strong> Your data stays safe when you update.</span><a class="btn small" href="${esc(apk.browser_download_url)}" target="_blank" rel="noopener">Download update</a>`;
+  } catch {}
 }
 
 /* ---------- account, install, backup ---------- */
 $("signOut").addEventListener("click", () => LedgerSync.signOut());
-$("copySetup").addEventListener("click", async () => {
-  const link = LedgerSync.setupLink();
-  try { await navigator.clipboard.writeText(link); toast("Setup code copied. Paste it on the other device's Connect screen."); }
-  catch { prompt("Copy this setup code:", link); }
-});
-$("backupBtn").addEventListener("click", () => downloads.save({ filename: `salon-ledger-backup-${today()}.json`, data: JSON.stringify({ app: "salon-ledger", exported: new Date().toISOString(), data: LedgerSync.exportAll() }) }));
+$("backupBtn").addEventListener("click", () => downloads.save({ filename: `salon-ledger-backup-${today()}.json`, data: JSON.stringify({ app: "salon-ledger", exported: new Date().toISOString(), salon: S.status?.salon?.code, data: LedgerSync.exportAll() }) }));
 $("restoreFile").addEventListener("change", async e => {
   const f = e.target.files[0]; if (!f) return;
   try { const j = JSON.parse(await f.text()); const n = LedgerSync.importAll(j.data || j); toast(`Restored ${n} records`); }
-  catch { toast("That file is not a Salon Ledger backup."); }
+  catch (err) { toast(err?.code === "readonly" ? err.message : "That file is not a Salon Ledger backup."); }
   e.target.value = "";
 });
 $("rcptPrint").addEventListener("click", () => window.print());
@@ -1226,33 +1889,45 @@ window.addEventListener("appinstalled", () => { $("installBtn").hidden = true; t
 $("installBtn").addEventListener("click", async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $("installBtn").hidden = true; });
 function renderInstallHelp() {
   const ua = navigator.userAgent, standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
-  $("installHelp").textContent = standalone ? "Installed. You are using the app version on this device."
+  $("installHelp").textContent = /Electron/.test(ua) ? "You are using the desktop app. It updates itself automatically when a new version is released. Your data stays safe."
+    : isNative ? "You are using the Android app. When a new version is released you'll see an Update button here. PDFs and backups open the share menu."
+    : standalone ? "Installed. You are using the app version on this device."
     : /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? "In Safari, tap the Share button, then Add to Home Screen."
     : installEvt ? "Press Install app at the top of the screen."
     : /Android/.test(ua) ? "In Chrome, open the ⋮ menu, then Install app or Add to Home screen."
     : "In Chrome or Edge, click the install icon at the right end of the address bar, or open the browser menu and choose Install.";
 }
 renderInstallHelp();
-if (/Electron/.test(navigator.userAgent)) { $("installHelp").textContent = "You are using the desktop app. Updates: download the newest installer from the download page and run it; your data stays."; }
-else if (isNative) { $("rcptPrint").hidden = true; $("installBtn").hidden = true; $("installHelp").textContent = "You are using the Android app. PDFs, CSV exports and backups open the share menu, so you can save them to Files or send them by WhatsApp or email."; }
+if (isNative) { $("rcptPrint").hidden = true; $("installBtn").hidden = true; }
 if (!isNative && !/Electron/.test(navigator.userAgent) && "serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
 
 /* ---------- boot ---------- */
-["txDate", "tDate", "aDate"].forEach(id => $(id).value = today());
+window.toast = toast;
+window.addEventListener("unhandledrejection", e => { if (e.reason && e.reason.code === "readonly") e.preventDefault(); });
+["txDate", "tDate", "aDate", "dDate"].forEach(id => $(id).value = today());
 ["fMonth", "rMonth", "sMonth"].forEach(id => $(id).value = monthOf(today()));
 fillCats();
 try { const t = localStorage.getItem("ledgerTab"); if (t && $("tab-" + t)) S.tab = t; } catch {}
-let started = false;
-window.startLedger = () => {
-  if (started) return; started = true;
+let ledgerStarted = false;
+window.onLedgerStatus = applyStatus;
+LedgerSync.onStatus(st => { if (ledgerStarted) applyStatus(st); });
+window.startLedger = (st) => {
+  if (ledgerStarted) return; ledgerStarted = true;
   db = window.LedgerDB;
-  showTab(S.tab);
-  for (const col of COLS) db.collection(col).onSnapshot(snap => {
-    S[col] = snap.docs.map(d => ({ ...d.data(), id: d.id })).sort(SORTS[col] || (() => 0));
-    queueRender();
-  });
-  db.doc("settings/business").onSnapshot(d => { S.settings = d.exists ? d.data() : {}; queueRender(); });
+  ["txDate", "tDate", "aDate", "dDate"].forEach(id => $(id).value = today());
+  applyStatus(st);
+  if (st?.member) {
+    for (const col of COLS) db.collection(col).onSnapshot(snap => {
+      S[col] = snap.docs.map(d => ({ ...d.data(), id: d.id })).sort(SORTS[col] || (() => 0));
+      if (col === "appointments") scheduleNative();
+      queueRender();
+    });
+    db.doc("settings/business").onSnapshot(d => { S.settings = d.exists ? d.data() : {}; queueRender(); });
+  }
+  showTab(st && !st.member && st.admin ? "admin" : S.tab);
   $("exportCsv").hidden = false;
+  checkForUpdate();
+  setTimeout(checkAlerts, 3000);
 };
 </script>
 

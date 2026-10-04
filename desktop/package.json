@@ -3,7 +3,7 @@
   "productName": "Salon Ledger",
   "version": "1.0.0",
   "description": "Appointments, sales, expenses, inventory, commission and VAT receipts for salons and spas",
-  "author": "Salon Ledger",
+  "author": "Hostready LLC",
   "license": "UNLICENSED",
   "main": "main.js",
   "devDependencies": {
@@ -13,10 +13,19 @@
   "build": {
     "appId": "ae.salonledger.app",
     "productName": "Salon Ledger",
-    "directories": { "output": "dist" },
-    "files": ["main.js", "icon.png", "www/**/*"],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "icon.png",
+      "www/**/*"
+    ],
     "icon": "icon.png",
-    "win": { "target": "nsis", "artifactName": "SalonLedger-Setup-${version}.exe" },
+    "win": {
+      "target": "nsis",
+      "artifactName": "SalonLedger-Setup-${version}.exe"
+    },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
@@ -25,7 +34,30 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Salon Ledger"
     },
-    "mac": { "target": { "target": "dmg", "arch": ["universal"] }, "category": "public.app-category.business", "artifactName": "SalonLedger-${version}-Mac.dmg" },
-    "linux": { "target": "AppImage", "artifactName": "SalonLedger-${version}-Linux.AppImage", "category": "Office" }
+    "mac": {
+      "target": {
+        "target": "dmg",
+        "arch": [
+          "universal"
+        ]
+      },
+      "category": "public.app-category.business",
+      "artifactName": "SalonLedger-${version}-Mac.dmg"
+    },
+    "linux": {
+      "target": "AppImage",
+      "artifactName": "SalonLedger-${version}-Linux.AppImage",
+      "category": "Office"
+    },
+    "copyright": "\u00a9 2026 Hostready LLC. All rights reserved.",
+    "publish": {
+      "provider": "github",
+      "owner": "hostreadyllc",
+      "repo": "Saloon-Spa",
+      "releaseType": "release"
+    }
+  },
+  "dependencies": {
+    "electron-updater": "6.8.9"
   }
 }

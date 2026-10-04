@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Salon Ledger Admin Guide</title>
+<style>
+:root { --bg:#F3F5F3; --surface:#fff; --line:#D5DDD8; --fg:#1C2622; --muted:#5E6D66; --accent:#2F6B5B; --soft:#DCEAE4; --warn:#B26A12; --warn-soft:#F8E9D2; }
+@media (prefers-color-scheme: dark) { :root { --bg:#121815; --surface:#19211D; --line:#2F3B35; --fg:#E6EDE9; --muted:#98A79F; --accent:#7CC2AA; --soft:#23362F; --warn:#E3A452; --warn-soft:#3A2C17; color-scheme: dark; } }
+body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.55 "Segoe UI", system-ui, sans-serif; }
+main { max-width: 780px; margin: 0 auto; padding: 32px 16px 64px; display:grid; gap: 20px; }
+h1 { font-family: Georgia, serif; font-weight: 400; font-size: 2rem; margin: 0; }
+h2 { font-family: Georgia, serif; font-weight: 400; font-size: 1.35rem; margin: 0 0 4px; }
+.lead { color: var(--muted); margin: 0; }
+section { background: var(--surface); border:1px solid var(--line); border-radius: 12px; padding: 20px 22px; }
+.tag { font-size:.78rem; font-weight:700; color: var(--accent); text-transform: uppercase; letter-spacing:.08em; }
+ol, ul { padding-left: 1.3em; margin: 10px 0 0; display:grid; gap: 8px; }
+.ui { background: var(--soft); padding: 1px 6px; border-radius: 5px; font-weight: 600; font-size: .94em; }
+code { background: var(--soft); padding: 1px 6px; border-radius: 5px; }
+.warn { background: var(--warn-soft); border-radius: 8px; padding: 10px 14px; margin-top: 12px; }
+.warn strong { color: var(--warn); }
+table { border-collapse: collapse; width: 100%; margin-top: 10px; font-size: .95rem; }
+td, th { border-top: 1px solid var(--line); padding: 8px 6px; vertical-align: top; text-align: left; }
+th { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+footer { color: var(--muted); font-size: .8rem; text-align: center; }
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <h1>Salon Ledger for Hostready</h1>
+    <p class="lead">How to switch on the selling version, add customer salons, collect renewals and control devices.</p>
+  </div>
+
+  <section>
+    <span class="tag">Do once · about 5 minutes</span>
+    <h2>1. Upgrade the database</h2>
+    <ol>
+      <li>In Supabase, open <span class="ui">SQL Editor</span> → <span class="ui">New query</span>.</li>
+      <li>Open <code>upgrade-v2-multi-salon.sql</code>, copy all of it, paste, and press <span class="ui">Run</span>. You should see <em>“Salon Ledger v2 database upgrade complete”</em>.</li>
+      <li>Go to <span class="ui">Authentication</span> → <span class="ui">Sign In / Providers</span>:
+        <ul>
+          <li>Turn <strong>on</strong> <span class="ui">Allow new users to sign up</span>. Only emails you or a salon owner have added can actually sign up; everyone else is refused by the database.</li>
+          <li>Turn <strong>off</strong> <span class="ui">Confirm email</span>, so staff can start straight after choosing a password.</li>
+        </ul></li>
+      <li>Install the new app version on your devices.</li>
+    </ol>
+    <div class="warn"><strong>Order matters:</strong> run the SQL before using the new app. Older app versions (1.0.2 and earlier) stop syncing after the upgrade, so update every device.</div>
+    <p>Your existing records become salon <strong>SALON-0001 “My Salon”</strong> (Premium, 10 devices, paid for 365 days). Your login becomes its owner and the <strong>Hostready admin</strong>. Rename it in the Admin tab.</p>
+  </section>
+
+  <section>
+    <span class="tag">Each new customer · 2 minutes</span>
+    <h2>2. Add a customer salon</h2>
+    <ol>
+      <li>Open <span class="ui">Hostready Admin</span> → <span class="ui">New salon</span>.</li>
+      <li>Enter the salon name, plan, devices included, trial days (default 7), and the owner's name and email. Leave the Salon Code blank to create one automatically.</li>
+      <li>Send the owner:
+        <ul>
+          <li>the download link: <code>github.com/hostreadyllc/Saloon-Spa/releases/latest</code></li>
+          <li>their <strong>Salon Code</strong></li>
+          <li>this instruction: <em>“Open the app, enter the Salon Code, tap ‘First time? Activate your account’, use your email and choose a password.”</em></li>
+        </ul></li>
+      <li>The owner's first device gets 2 days of temporary access and they approve it in <span class="ui">Settings → Devices</span>. They add their own staff in <span class="ui">Settings → Team logins</span>.</li>
+    </ol>
+  </section>
+
+  <section>
+    <span class="tag">Subscriptions</span>
+    <h2>3. Trials, renewals and expiry</h2>
+    <table>
+      <tr><th>Stage</th><th>What the salon sees</th></tr>
+      <tr><td>Free trial (7 days)</td><td>Blue banner: days left in the trial and your contact details.</td></tr>
+      <tr><td>7 days before the end</td><td>Yellow banner: “Your subscription ends on … Renew to avoid interruption.”</td></tr>
+      <tr><td>After the end date</td><td>Red banner. Read-only: they can view and export, but cannot add or change anything. The database enforces this, so changing the device clock doesn't help.</td></tr>
+      <tr><td>Suspended (by you)</td><td>Same as expired, with “account suspended”.</td></tr>
+    </table>
+    <p><strong>When a salon pays:</strong> Admin → <span class="ui">Manage</span> → <span class="ui">Record payment &amp; extend</span>. Choose 90, 180, 270 or 365 days, enter the amount excluding VAT and press Record. The new period starts the day after the current one ends, a Hostready <strong>tax invoice</strong> number is created (HR-YYMM-0001…), and the PDF downloads. Every device unlocks within a few minutes.</p>
+    <p>Fill in <span class="ui">Hostready details</span> (phone, email, TRN, address, bank details) in the Admin tab. They appear on renewal banners and on your invoices.</p>
+  </section>
+
+  <section>
+    <span class="tag">Devices</span>
+    <h2>4. Device control</h2>
+    <ul>
+      <li>Every phone, tablet or PC registers itself when someone signs in and gets <strong>2 days of temporary access</strong>. At most 2 devices per salon can be on temporary access at once.</li>
+      <li>The <strong>owner</strong> can approve devices up to the plan's limit. Beyond the limit they see <em>“Your plan includes N devices. Contact Hostready to add more.”</em></li>
+      <li>To sell an extra device: Admin → Manage → raise <span class="ui">Devices included</span> and save (or approve that device directly there).</li>
+      <li>Removing a device locks it out immediately, for example when a phone is lost or a staff member leaves.</li>
+      <li>An unapproved or removed device sees no data at all. This is checked by the database, not just the app.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="tag">Updates</span>
+    <h2>5. Changing the software later</h2>
+    <ul>
+      <li>All salons share one app. When you ask Claude for a change, it goes to GitHub, the installers rebuild automatically, and the new version appears at the download link.</li>
+      <li><strong>Windows</strong> updates itself in the background. <strong>Android</strong> shows an “Update” button once the permanent signing key secrets are added in GitHub. <strong>iPhone/iPad</strong> (web version) updates on its own.</li>
+      <li>Salon data lives in the cloud, so updating or reinstalling never deletes records.</li>
+      <li>Each salon's services, prices, staff, receipt details and opening hours are settings inside the app. They never need a new build.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="tag">Before your first paying customer</span>
+    <h2>6. Checklist</h2>
+    <ul>
+      <li>Upgrade Supabase to a paid plan for daily backups and no pausing.</li>
+      <li>Add the 2 Android signing key secrets in GitHub (Settings → Secrets and variables → Actions).</li>
+      <li>Fill in Hostready details in the Admin tab.</li>
+      <li>Optional: a code-signing certificate, which removes the “unknown publisher” warning on Windows and Mac.</li>
+      <li>Have your terms of service and privacy policy ready, because you store your customers' client data.</li>
+    </ul>
+  </section>
+  <footer>© 2026 Hostready LLC. All rights reserved.</footer>
+</main>
+</body>
+</html>

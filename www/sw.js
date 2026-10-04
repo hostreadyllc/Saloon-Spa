@@ -1,7 +1,7 @@
 /* Offline support: the app files are cached so the app opens without internet.
    Data sync goes straight to Supabase and is never cached here. */
-const VERSION = "salon-ledger-v1";
-const SHELL = ["./", "index.html", "store.js", "config.js", "manifest.webmanifest", "lib/supabase.js", "lib/jspdf.umd.min.js",
+const VERSION = "salon-ledger-v2";
+const SHELL = ["./", "index.html", "store.js", "config.js", "version.js", "manifest.webmanifest", "lib/supabase.js", "lib/jspdf.umd.min.js",
   "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "icons/apple-touch-icon.png", "icons/favicon-32.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

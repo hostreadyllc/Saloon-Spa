@@ -24,6 +24,7 @@ jobs:
         with: { distribution: temurin, java-version: 21 }
       - name: Copy the app into Android
         run: |
+          echo "window.APP_VERSION = \"$APP_VERSION\";" > www/version.js
           npm ci
           npx cap sync android
       - name: Restore signing key
@@ -71,6 +72,7 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: |
           cp -r ../www www
+          echo "window.APP_VERSION = \"$APP_VERSION\";" > www/version.js
           npm install --no-audit --no-fund
           npm version "$APP_VERSION" --no-git-tag-version --allow-same-version
           npx electron-builder ${{ matrix.args }} --publish never
@@ -79,6 +81,8 @@ jobs:
           name: ${{ matrix.name }}
           path: |
             desktop/dist/*.exe
+            desktop/dist/*.exe.blockmap
+            desktop/dist/latest.yml
             desktop/dist/*.dmg
 
   web:
@@ -89,6 +93,7 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
+      - run: echo "window.APP_VERSION = \"$APP_VERSION\";" > www/version.js
       - uses: actions/configure-pages@v5
         with: { enablement: true }
       - uses: actions/upload-pages-artifact@v4
@@ -119,6 +124,9 @@ jobs:
             | **Mac** | `SalonLedger-${{ env.APP_VERSION }}-Mac.dmg` |
             | **Android phone / tablet** | `SalonLedger-${{ env.APP_VERSION }}-Android….apk` |
             | **iPhone / iPad** | Open https://hostreadyllc.github.io/Saloon-Spa/ in Safari, tap Share, then Add to Home Screen |
+
+            Windows updates itself automatically after the first install. Android shows an Update button inside the app.
+            Your data stays safe in the cloud during every update.
 
             Windows may show "Windows protected your PC": press **More info**, then **Run anyway**.
             Mac may say the app can't be checked: right-click the app, choose **Open**, then **Open**.
